@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+build/
+dist/
+*.egg-info/
+
+# Sensitive Data & Vault Keys (NEVER COMMIT THESE)
+credentials.json
+token.json
+.env
+.env.*
+*.key
+*.pem
+*.crt
+email_service/data/.vault_key
+email_service/data/config.json
+email_service/data/state.json
+
+# Logs & Temporary Files
+*.log
+tmp/
+temp/
+*.tmp
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

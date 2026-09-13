@@ -194,11 +194,15 @@
           <p class="content-header-subtitle" id="current-view-breadcrumb">Everything you need to know about your inbox</p>
         </div>
         <div class="content-header-actions" id="header-sync-container">
-          <div class="header-sync-indicator" title="Mailbox synchronization state">
-            <span class="sync-live-dot"></span>
-            <span class="sync-live-label">Synced:</span>
-            <span class="sync-live-time" id="header-sync-time">Just now</span>
+          <div class="header-sync-indicator" title="Real-time WebSocket connection state">
+            <span class="sync-live-dot ws-live-pulse" id="ws-status-dot"></span>
+            <span class="sync-live-label" id="ws-status-label">Live</span>
+            <span class="sync-live-time" id="header-sync-time">Connected</span>
           </div>
+          <button class="btn btn-secondary btn-header-simulate" id="btn-header-simulate" onclick="simulateLiveEmail()" title="Simulate real-time incoming test email to test live socket streaming">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            <span>Live Test</span>
+          </button>
           <button class="btn btn-secondary btn-header-sync" id="btn-header-sync" onclick="triggerSync()" title="Check and fetch new incoming emails">
             <svg class="header-sync-icon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
             <span>Sync Mail</span>

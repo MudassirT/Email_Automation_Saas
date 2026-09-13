@@ -21,7 +21,7 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent.parent / ".env")
 load_dotenv()
 
-from fastapi import FastAPI, HTTPException, Request, Response, BackgroundTasks, Depends
+from fastapi import FastAPI, HTTPException, Request, Response, BackgroundTasks, Depends, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -36,6 +36,7 @@ from .security import vault, dispatch_limiter, api_rate_limiter, tenant_security
 from .auth import user_manager, google_oauth, create_jwt_token, decode_jwt_token
 from .rag_engine import rag_chatbot
 from .gemini_pool import gemini_token_manager
+from .websocket_manager import ws_manager
 
 BASE_DIR = Path(__file__).parent
 STATIC_DIR = BASE_DIR / "static"
@@ -90,7 +91,7 @@ async def security_middleware(request: Request, call_next):
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         "font-src 'self' https://fonts.gstatic.com; "
         "img-src 'self' data:; "
-        "connect-src 'self';"
+        "connect-src 'self' ws: wss:;"
     )
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -305,6 +306,41 @@ def serve_dashboard():
         if index_path.exists():
             return FileResponse(str(index_path))
     return JSONResponse({"message": "AutoMail AI Backend Running. UI is initializing..."})
+
+
+# --- REAL-TIME LIVE WEBSOCKET ENDPOINT ---
+@app.on_event("startup")
+async def on_startup():
+    import asyncio
+    try:
+        loop = asyncio.get_running_loop()
+        ws_manager.set_loop(loop)
+    except Exception:
+        pass
+
+
+@app.websocket("/ws/live")
+async def websocket_live_endpoint(websocket: WebSocket):
+    """Real-time bi-directional telemetry stream for browser clients."""
+    await ws_manager.connect(websocket)
+    try:
+        # Send initial welcome and live stats payload
+        stats = storage.for_user("default").get_stats()
+        await websocket.send_json({
+            "type": "connected",
+            "message": "AutoMail Live Telemetry Stream Connected",
+            "data": stats,
+            "timestamp": datetime.now().isoformat()
+        })
+        while True:
+            # Listen for client heartbeat pings to keep socket alive
+            data = await websocket.receive_text()
+            if data == "ping":
+                await websocket.send_text("pong")
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket)
+    except Exception:
+        ws_manager.disconnect(websocket)
 
 
 # --- AUTH & TENANT ENDPOINTS ---
@@ -572,6 +608,18 @@ def get_email_detail(email_id: str, user_id: str = Depends(get_current_user_id))
 @app.post("/api/emails/sync")
 def trigger_sync(background_tasks: BackgroundTasks, user_id: str = Depends(get_current_user_id)):
     res = email_engine.sync_emails(user_id=user_id)
+    ws_manager.broadcast_sync("sync_completed", {
+        "user_id": user_id,
+        "new_emails": res.get("new_emails", 0),
+        "total_processed": res.get("total_processed", 0)
+    })
+    return res
+
+
+@app.post("/api/emails/simulate")
+def simulate_email(scenario: str = "customer_support", user_id: str = Depends(get_current_user_id)):
+    """Simulate an incoming email for real-time testing."""
+    res = email_engine.simulate_test_email(scenario=scenario, user_id=user_id)
     return res
 
 

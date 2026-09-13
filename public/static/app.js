@@ -221,11 +221,294 @@ document.addEventListener("DOMContentLoaded", async () => {
   await checkAuthStatus();
   await loadAllData();
 
-  // Auto-refresh interval (every 12 seconds)
+  // Connect live WebSocket stream for instant real-time telemetry
+  initLiveSocket();
+
+  // Auto-refresh interval as resilient polling fallback (every 20 seconds)
   refreshInterval = setInterval(() => {
     loadAllData(false);
-  }, 12000);
+  }, 20000);
 });
+
+// ==========================================
+// REAL-TIME LIVE WEBSOCKET TELEMETRY
+// ==========================================
+let liveSocket = null;
+let liveSocketPingTimer = null;
+let liveSocketReconnectTimer = null;
+let liveSocketAttempts = 0;
+
+function initLiveSocket() {
+  if (liveSocket && (liveSocket.readyState === WebSocket.OPEN || liveSocket.readyState === WebSocket.CONNECTING)) {
+    return;
+  }
+
+  if (liveSocketReconnectTimer) {
+    clearTimeout(liveSocketReconnectTimer);
+    liveSocketReconnectTimer = null;
+  }
+
+  const dot = document.getElementById("ws-status-dot");
+  const label = document.getElementById("ws-status-label");
+  const timeEl = document.getElementById("header-sync-time");
+
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const host = window.location.host || "127.0.0.1:8000";
+  const wsUrl = `${protocol}//${host}/ws/live`;
+
+  try {
+    liveSocket = new WebSocket(wsUrl);
+
+    liveSocket.onopen = () => {
+      liveSocketAttempts = 0;
+      if (dot) {
+        dot.classList.remove("disconnected");
+        dot.classList.add("ws-live-pulse");
+      }
+      if (label) label.textContent = "Live Socket";
+      if (timeEl) timeEl.textContent = "Connected";
+
+      console.info("[LiveSocket] ⚡ Connected to AutoMail real-time stream");
+
+      // Periodic heartbeat ping every 25 seconds
+      if (liveSocketPingTimer) clearInterval(liveSocketPingTimer);
+      liveSocketPingTimer = setInterval(() => {
+        if (liveSocket && liveSocket.readyState === WebSocket.OPEN) {
+          liveSocket.send("ping");
+        }
+      }, 25000);
+    };
+
+    liveSocket.onmessage = (event) => {
+      try {
+        if (event.data === "pong") return;
+        const msg = JSON.parse(event.data);
+        handleLiveEvent(msg);
+      } catch (err) {
+        console.debug("[LiveSocket] Error parsing message:", err, event.data);
+      }
+    };
+
+    liveSocket.onclose = (e) => {
+      if (dot) {
+        dot.classList.remove("ws-live-pulse");
+        dot.classList.add("disconnected");
+      }
+      if (label) label.textContent = "Offline (Reconnecting)";
+      if (timeEl) timeEl.textContent = "Polling Mode";
+
+      if (liveSocketPingTimer) {
+        clearInterval(liveSocketPingTimer);
+        liveSocketPingTimer = null;
+      }
+
+      // Reconnect with backoff up to 10s
+      liveSocketAttempts++;
+      const delay = Math.min(3000 * Math.pow(1.2, liveSocketAttempts - 1), 10000);
+      liveSocketReconnectTimer = setTimeout(initLiveSocket, delay);
+    };
+
+    liveSocket.onerror = (err) => {
+      console.debug("[LiveSocket] Connection error:", err);
+    };
+  } catch (err) {
+    console.debug("[LiveSocket] Unable to instantiate WebSocket:", err);
+    if (dot) {
+      dot.classList.remove("ws-live-pulse");
+      dot.classList.add("disconnected");
+    }
+    if (label) label.textContent = "Polling Fallback";
+    liveSocketReconnectTimer = setTimeout(initLiveSocket, 5000);
+  }
+}
+
+function handleLiveEvent(msg) {
+  if (!msg || !msg.type) return;
+
+  const eventType = msg.type;
+  const eventData = msg.data || {};
+
+  // Update header timestamp on any valid incoming event
+  const timeEl = document.getElementById("header-sync-time");
+  if (timeEl) {
+    const now = new Date();
+    timeEl.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+
+  switch (eventType) {
+    case "connected":
+      if (eventData && typeof eventData === "object") {
+        updateStatsFromPayload(eventData);
+      }
+      break;
+
+    case "stats_update":
+      updateStatsFromPayload(eventData);
+      break;
+
+    case "new_email":
+      {
+        const email = eventData.email || {};
+        showToast(`📬 Live Email: "${escapeHtml(email.subject || 'New Message')}" from ${escapeHtml(email.from || 'Sender')}`, "info");
+        if (currentView === "overview") loadOverview();
+        if (currentView === "inbox") loadInbox();
+        loadStats();
+      }
+      break;
+
+    case "draft_ready":
+      {
+        const draft = eventData.draft || {};
+        showToast(`🤖 AI drafted response: "${escapeHtml(draft.subject || 'Reply')}"`, "success");
+        if (currentView === "approvals") loadApprovals();
+        if (currentView === "overview") loadOverview();
+        loadStats();
+      }
+      break;
+
+    case "draft_updated":
+      if (currentView === "approvals") loadApprovals();
+      if (currentView === "overview") loadOverview();
+      loadStats();
+      break;
+
+    case "email_sent":
+      {
+        const sent = eventData.email || {};
+        showToast(`📤 Email dispatched to ${escapeHtml(sent.to || 'recipient')}`, "success");
+        if (currentView === "sent") loadSent();
+        loadStats();
+      }
+      break;
+
+    case "live_log":
+      {
+        const log = eventData.log || {};
+        appendLiveLog(log);
+      }
+      break;
+
+    case "sync_completed":
+      {
+        const count = eventData.new_emails || 0;
+        if (count > 0) {
+          showToast(`⚡ Live sync: Received ${count} new email(s)`, "success");
+        }
+        loadAllData(false);
+      }
+      break;
+
+    default:
+      console.debug("[LiveSocket] Received event:", eventType, eventData);
+  }
+}
+
+function updateStatsFromPayload(stats) {
+  if (!stats) return;
+  const totalEl = document.getElementById("stat-total-emails");
+  const unreadEl = document.getElementById("stat-unread-emails");
+  const pendingEl = document.getElementById("stat-pending-approvals");
+  const sentEl = document.getElementById("stat-sent-count");
+  const rulesEl = document.getElementById("stat-active-rules");
+
+  if (totalEl && stats.total_emails !== undefined) totalEl.textContent = stats.total_emails;
+  if (unreadEl && stats.unread_emails !== undefined) unreadEl.textContent = `${stats.unread_emails} unread in inbox`;
+  if (pendingEl && stats.pending_approvals !== undefined) pendingEl.textContent = stats.pending_approvals;
+  if (sentEl && stats.sent_count !== undefined) sentEl.textContent = stats.sent_count;
+  if (rulesEl && stats.active_rules !== undefined) rulesEl.textContent = stats.active_rules;
+
+  // Sidebar Badges
+  const badgeInbox = document.getElementById("badge-inbox-count");
+  if (badgeInbox && stats.unread_emails !== undefined) {
+    const unread = stats.unread_emails;
+    badgeInbox.textContent = unread;
+    badgeInbox.style.display = unread > 0 ? "inline-flex" : "none";
+  }
+
+  const badgeApprovals = document.getElementById("badge-approvals-count");
+  if (badgeApprovals && stats.pending_approvals !== undefined) {
+    const pending = stats.pending_approvals;
+    badgeApprovals.textContent = pending;
+    badgeApprovals.style.display = pending > 0 ? "inline-flex" : "none";
+  }
+
+  const badgeRules = document.getElementById("badge-rules-count");
+  if (badgeRules && stats.active_rules !== undefined) {
+    const activeR = stats.active_rules;
+    badgeRules.textContent = activeR;
+    badgeRules.style.display = activeR > 0 ? "inline-flex" : "none";
+  }
+}
+
+function appendLiveLog(log) {
+  if (!log) return;
+  const terminal = document.getElementById("logs-terminal-view");
+  if (terminal) {
+    const logRow = document.createElement("div");
+    logRow.className = "log-line";
+    logRow.style.animation = "fade-in 0.3s ease";
+    logRow.innerHTML = `
+      <span class="log-time">[${escapeHtml(log.timestamp || '')}]</span>
+      <span class="log-cat">[${escapeHtml(log.category || 'LIVE')}]</span>
+      <span class="log-level-${escapeHtml(log.level || 'INFO')}">[${escapeHtml(log.level || 'INFO')}]</span>
+      <span style="color: #e2e8f0;">${escapeHtml(log.message || '')}</span>
+    `;
+    terminal.prepend(logRow);
+  }
+
+  // Also prepend to overview recent activity if overview is open
+  const overviewLogs = document.getElementById("overview-logs-list");
+  if (overviewLogs && currentView === "overview") {
+    const empty = overviewLogs.querySelector(".panel-empty-state");
+    if (empty) overviewLogs.innerHTML = "";
+
+    const item = document.createElement("div");
+    item.className = "overview-log-row";
+    item.style.animation = "fade-in 0.3s ease";
+    item.innerHTML = `
+      <span class="log-row-time">${escapeHtml((log.timestamp || '').split(' ')[1] || log.timestamp || '')}</span>
+      <span class="badge ${log.level === 'SUCCESS' ? 'badge-success' : log.level === 'ERROR' ? 'badge-urgent' : 'badge-category'} log-row-badge">${escapeHtml(log.category || 'LIVE')}</span>
+      <span class="log-row-message" title="${escapeHtml(log.message || '')}">${escapeHtml(log.message || '')}</span>
+    `;
+    overviewLogs.prepend(item);
+    while (overviewLogs.children.length > 5) {
+      overviewLogs.removeChild(overviewLogs.lastChild);
+    }
+  }
+}
+
+async function simulateLiveEmail(scenario = "customer_support") {
+  const btn = document.getElementById("btn-header-simulate");
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `
+      <svg width="13" height="13" class="spin" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      <span>Simulating...</span>
+    `;
+  }
+
+  try {
+    const res = await fetch("/api/emails/simulate?scenario=" + encodeURIComponent(scenario), {
+      method: "POST"
+    });
+    const data = await res.json();
+    if (res.ok) {
+      showToast(`⚡ Simulated test email dispatched: "${data.subject}"`, "success");
+    } else {
+      showToast(`Simulation error: ${data.detail || 'Failed'}`, "error");
+    }
+  } catch (err) {
+    showToast(`Simulation network error: ${err.message}`, "error");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        <span>Live Test</span>
+      `;
+    }
+  }
+}
 
 // Theme Management (Dark & Light)
 function initTheme() {

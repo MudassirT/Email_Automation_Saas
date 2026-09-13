@@ -13,6 +13,11 @@ from typing import Dict, List, Any, Optional, Tuple
 import threading
 import hashlib
 
+try:
+    from .websocket_manager import ws_manager
+except ImportError:
+    ws_manager = None
+
 def get_data_dir() -> Path:
     custom = os.getenv("AUTOMAIL_DATA_DIR")
     p = Path(custom) if custom else Path(__file__).parent / "data"
@@ -177,6 +182,12 @@ class StorageManager:
             
             self.state.setdefault("emails", {})[email_data["id"]] = email_data
             self._save_unlocked()
+            if ws_manager:
+                try:
+                    ws_manager.broadcast_sync("new_email", {"email": email_data})
+                    ws_manager.broadcast_sync("stats_update", self.get_stats())
+                except Exception:
+                    pass
             return email_data["id"]
 
     def update_email(self, email_id: str, updates: Dict[str, Any]) -> bool:
@@ -184,6 +195,11 @@ class StorageManager:
             if email_id in self.state.get("emails", {}):
                 self.state["emails"][email_id].update(updates)
                 self._save_unlocked()
+                if ws_manager:
+                    try:
+                        ws_manager.broadcast_sync("stats_update", self.get_stats())
+                    except Exception:
+                        pass
                 return True
             return False
 
@@ -219,6 +235,12 @@ class StorageManager:
                 self.state["emails"][email_id]["draft_id"] = draft_data["id"]
                 
             self._save_unlocked()
+            if ws_manager:
+                try:
+                    ws_manager.broadcast_sync("draft_ready", {"draft": draft_data})
+                    ws_manager.broadcast_sync("stats_update", self.get_stats())
+                except Exception:
+                    pass
             return draft_data["id"]
 
     def update_draft(self, draft_id: str, updates: Dict[str, Any]) -> bool:
@@ -226,6 +248,12 @@ class StorageManager:
             if draft_id in self.state.get("drafts", {}):
                 self.state["drafts"][draft_id].update(updates)
                 self._save_unlocked()
+                if ws_manager:
+                    try:
+                        ws_manager.broadcast_sync("draft_updated", {"draft_id": draft_id, "updates": updates})
+                        ws_manager.broadcast_sync("stats_update", self.get_stats())
+                    except Exception:
+                        pass
                 return True
             return False
 
@@ -240,6 +268,11 @@ class StorageManager:
                 rule_data["id"] = f"rule_{uuid.uuid4().hex[:6]}"
             self.state.setdefault("rules", []).append(rule_data)
             self._save_unlocked()
+            if ws_manager:
+                try:
+                    ws_manager.broadcast_sync("stats_update", self.get_stats())
+                except Exception:
+                    pass
             return rule_data["id"]
 
     def update_rule(self, rule_id: str, updates: Dict[str, Any]) -> bool:
@@ -249,6 +282,11 @@ class StorageManager:
                 if r.get("id") == rule_id:
                     r.update(updates)
                     self._save_unlocked()
+                    if ws_manager:
+                        try:
+                            ws_manager.broadcast_sync("stats_update", self.get_stats())
+                        except Exception:
+                            pass
                     return True
             return False
 
@@ -259,6 +297,11 @@ class StorageManager:
             if len(new_rules) != len(rules):
                 self.state["rules"] = new_rules
                 self._save_unlocked()
+                if ws_manager:
+                    try:
+                        ws_manager.broadcast_sync("stats_update", self.get_stats())
+                    except Exception:
+                        pass
                 return True
             return False
 
@@ -271,6 +314,12 @@ class StorageManager:
                 sent_record["sent_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             self.state.setdefault("sent_emails", []).insert(0, sent_record)
             self._save_unlocked()
+            if ws_manager:
+                try:
+                    ws_manager.broadcast_sync("email_sent", {"sent": sent_record})
+                    ws_manager.broadcast_sync("stats_update", self.get_stats())
+                except Exception:
+                    pass
             return sent_record["id"]
 
     def get_sent_emails(self) -> List[Dict[str, Any]]:
@@ -294,6 +343,11 @@ class StorageManager:
             if len(logs) > 500:
                 self.state["logs"] = logs[:500]
             self._save_unlocked()
+            if ws_manager:
+                try:
+                    ws_manager.broadcast_sync("live_log", entry)
+                except Exception:
+                    pass
 
     def get_logs(self, limit: int = 100) -> List[Dict[str, Any]]:
         with _lock:

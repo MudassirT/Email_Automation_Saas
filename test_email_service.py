@@ -39,20 +39,33 @@ def test_all():
     assert stats["active_rules"] >= 1
     print("Storage OK!")
 
-    print("\n--- 3. Testing AI Engine & Prompt Injection Shield ---")
+    print("\n--- 3. Testing AI Engine, Executive Briefing & Prompt Injection Shield ---")
     # A. Normal Email
     sample_email = {
         "from": "Alex Carter <alex@acmecorp.com>",
         "subject": "Urgent: System outage in European region",
-        "body": "Our server nodes in Frankfurt are down and customers cannot check out. Please escalate immediately!"
+        "body": "Our server nodes in Frankfurt are down and customers cannot check out. Please clarify the restore timeline and escalate immediately!"
     }
     analysis = ai_engine.analyze_email(sample_email)
     assert analysis["category"] == "Urgent Action"
     assert analysis["priority"] == "Urgent"
+    assert analysis["sender_name"] == "Alex Carter"
+    assert analysis["sender_organization"] == "Acmecorp"
+    assert "compressed_summary" in analysis and len(analysis["compressed_summary"]) > 15
+    assert "core_intent" in analysis
+    assert isinstance(analysis["tasks"], list) and len(analysis["tasks"]) > 0
+    assert isinstance(analysis["ai_automated_actions"], list) and len(analysis["ai_automated_actions"]) > 0
+    print(f"Verified sender: {analysis['sender_name']} ({analysis['sender_organization']})")
+    print(f"Verified compressed briefing: '{analysis['compressed_summary']}'")
+    print(f"Verified extracted tasks: {analysis['tasks']}")
 
     draft = ai_engine.generate_reply(sample_email, tone="Professional")
     assert len(draft) > 20
-    print("AI Normal Processing OK!")
+    print("AI Normal Processing & Executive Briefing OK!")
+
+    # Test AI connectivity check
+    ok, msg = ai_engine.test_ai_connection()
+    print(f"AI Connectivity Diagnostic result: {ok} -> {msg}")
 
     # B. Malicious Prompt Injection Attack
     malicious_email = {

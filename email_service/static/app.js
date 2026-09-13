@@ -173,6 +173,12 @@ function initActions() {
     testConnBtn.addEventListener("click", testConnection);
   }
 
+  // Test AI Connection & API Key
+  const testAIBtn = document.getElementById("btn-test-ai");
+  if (testAIBtn) {
+    testAIBtn.addEventListener("click", testAIConnection);
+  }
+
   // Save Settings
   const saveSettingsBtn = document.getElementById("btn-save-settings");
   if (saveSettingsBtn) {
@@ -228,6 +234,7 @@ function showToast(msg, type = "info") {
 // Data Loaders
 async function loadAllData(showToasts = true) {
   await loadStats();
+  fetch("/api/settings").then(r => r.json()).then(cfg => updateAIStatusPill(cfg)).catch(()=>{});
   if (currentView === "overview") loadOverview();
   else if (currentView === "inbox") loadInbox();
   else if (currentView === "approvals") loadApprovals();
@@ -371,6 +378,14 @@ async function loadInbox() {
   }
 }
 
+function getInitials(name) {
+  if (!name) return "EM";
+  const clean = name.replace(/<[^>]+>/g, "").trim();
+  const parts = clean.split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return clean.slice(0, 2).toUpperCase() || "EM";
+}
+
 async function selectEmail(id) {
   selectedEmailId = id;
   loadInbox(); // refresh selection highlight
@@ -388,8 +403,81 @@ async function selectEmail(id) {
     if (content) content.style.display = "block";
 
     const priorityClass = email.priority === "Urgent" ? "badge-urgent" : email.priority === "High" ? "badge-high" : "badge-medium";
+    const senderName = email.sender_name || (email.from ? email.from.split("<")[0].trim().replace(/['"]/g, "") : "Sender");
+    const senderOrg = email.sender_organization || (email.from && email.from.includes("@") ? email.from.split("@")[1].split(".")[0].toUpperCase() : "External");
+    const senderInitials = getInitials(senderName);
+    const tasks = Array.isArray(email.tasks) && email.tasks.length > 0 ? email.tasks : ["Review inquiry & respond"];
+    const aiActions = Array.isArray(email.ai_automated_actions) && email.ai_automated_actions.length > 0
+      ? email.ai_automated_actions
+      : ["Ingested & parsed by AI", "Intent analyzed", "Prepared contextual response"];
+    const compressed = email.compressed_summary || email.summary || "Summary unavailable";
 
     content.innerHTML = `
+      <!-- 1. AI EXECUTIVE BRIEFING FOR OWNER -->
+      <div class="briefing-card">
+        <div class="briefing-header">
+          <div class="sender-profile">
+            <div class="sender-avatar">${escapeHtml(senderInitials)}</div>
+            <div>
+              <div class="sender-name">${escapeHtml(senderName)}</div>
+              <div class="sender-org">🏢 ${escapeHtml(senderOrg)} • <span style="font-family: monospace;">${escapeHtml(email.from)}</span></div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+            <span class="badge ${priorityClass}">${escapeHtml(email.priority || 'Normal')}</span>
+            <span class="badge badge-category">${escapeHtml(email.category || 'General')}</span>
+            <span class="badge" style="background: rgba(255,255,255,0.08); color: var(--text-main);">Sentiment: ${escapeHtml(email.sentiment || 'Neutral')}</span>
+          </div>
+        </div>
+
+        <!-- IN PLAIN WORDS (COMPRESSED SUMMARY FOR OWNER) -->
+        <div class="briefing-owner-callout">
+          <div class="callout-title">
+            <span>💬 WHAT THIS EMAIL SAYS (COMPRESSED FOR OWNER)</span>
+            <span class="callout-intent">🎯 Goal: ${escapeHtml(email.core_intent || email.category || 'General')}</span>
+          </div>
+          <div class="callout-text">
+            "${escapeHtml(compressed)}"
+          </div>
+        </div>
+
+        <!-- EXTRACTED ACTIONABLE TASKS CHECKLIST -->
+        <div class="task-checklist-box">
+          <div class="task-checklist-title">
+            <span>📋 Actionable Tasks Extracted by AI (${tasks.length})</span>
+            <span style="font-size: 0.75rem; color: var(--text-dim);">Checked items ready for automated resolution</span>
+          </div>
+          <div class="task-items-list">
+            ${tasks.map((t, idx) => `
+              <label class="task-checklist-item">
+                <input type="checkbox" checked id="task-chk-${email.id}-${idx}">
+                <span>${escapeHtml(t)}</span>
+              </label>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- AI AUTOMATED RESOLUTION & 1-CLICK DISPATCH -->
+        <div class="ai-automated-section">
+          <div class="ai-pill-row">
+            <span style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600;">AI Executed:</span>
+            ${aiActions.map(act => `<span class="ai-pill-tag">✓ ${escapeHtml(act)}</span>`).join('')}
+          </div>
+          ${draft && draft.status === 'pending' ? `
+            <div style="margin-top: 12px; display: flex; gap: 10px; align-items: center; justify-content: space-between; background: rgba(99, 102, 241, 0.08); padding: 12px 16px; border-radius: var(--radius-md); border: 1px dashed var(--border-active); flex-wrap: wrap;">
+              <div>
+                <div style="font-weight: 600; font-size: 0.88rem; color: #fff;">🤖 Ready for One-Click AI Task Automation</div>
+                <div style="font-size: 0.76rem; color: var(--text-muted);">AI drafted response addressing all ${tasks.length} task(s).</div>
+              </div>
+              <button class="btn btn-primary btn-ai-execute" onclick="approveDraft('${draft.id}')">
+                <span>🚀 Execute Tasks & Send AI Reply</span>
+              </button>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+
+      <!-- 2. ORIGINAL EMAIL THREAD -->
       <div class="viewer-header">
         <div class="viewer-title">${escapeHtml(email.subject)}</div>
         <div class="viewer-meta">
@@ -398,25 +486,12 @@ async function selectEmail(id) {
         </div>
       </div>
 
-      <!-- AI Intel Box -->
-      <div class="ai-intel-box">
-        <div class="ai-intel-title">
-          <span>🧠 AI Intelligence Breakdown</span>
-          <span class="badge ${priorityClass}">${escapeHtml(email.priority)}</span>
-          <span class="badge badge-category">${escapeHtml(email.category)}</span>
-          <span class="badge" style="background: rgba(255,255,255,0.08); color: var(--text-main);">Sentiment: ${escapeHtml(email.sentiment)}</span>
-        </div>
-        <div class="ai-intel-summary">
-          "${escapeHtml(email.summary || 'Summary unavailable')}"
-        </div>
-      </div>
-
-      <!-- Email Body -->
+      <!-- Full Email Body -->
       <div class="viewer-body">${escapeHtml(email.body)}</div>
 
-      <!-- Linked Draft Banner if exists -->
+      <!-- 3. AI GENERATED RESPONSE DRAFT (IF EXISTS) -->
       ${draft ? `
-        <div style="margin-top: 20px; background: rgba(99, 102, 241, 0.1); border: 1px solid var(--border-active); border-radius: var(--radius-md); padding: 18px;">
+        <div style="margin-top: 24px; background: rgba(99, 102, 241, 0.08); border: 1px solid var(--border-active); border-radius: var(--radius-md); padding: 18px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
             <span style="font-weight: 600; font-size: 0.9rem; color: #fff;">✨ AI Generated Draft (${escapeHtml(draft.tone || 'Professional')})</span>
             <span class="badge ${draft.status === 'sent' ? 'badge-success' : 'badge-high'}">${escapeHtml(draft.status.toUpperCase())}</span>
@@ -468,17 +543,36 @@ async function loadApprovals() {
 
     container.innerHTML = drafts.map(draft => {
       const orig = draft.original_email || {};
+      const senderName = orig.sender_name || (orig.from ? orig.from.split("<")[0].trim().replace(/['"]/g, "") : "Sender");
+      const senderOrg = orig.sender_organization || (orig.from && orig.from.includes("@") ? orig.from.split("@")[1].split(".")[0].toUpperCase() : "External");
+      const compressed = orig.compressed_summary || orig.summary || "Summary unavailable";
+      const tasks = Array.isArray(orig.tasks) && orig.tasks.length > 0 ? orig.tasks : ["Respond to inquiry"];
+
       return `
         <div class="approval-card" id="approval-card-${draft.id}">
           <div class="approval-header">
             <div class="approval-info">
               <h3>${escapeHtml(draft.subject)}</h3>
-              <div style="font-size: 0.82rem; color: var(--text-muted);">
-                Recipient: <strong style="color: #fff;">${escapeHtml(draft.recipient)}</strong>
+              <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 4px;">
+                Recipient: <strong style="color: #fff;">${escapeHtml(draft.recipient)}</strong> • 🏢 ${escapeHtml(senderOrg)}
               </div>
             </div>
             <div style="display: flex; gap: 8px; align-items: center;">
-              <span class="badge badge-urgent">Needs Review</span>
+              <span class="badge badge-urgent">Needs Sign-off</span>
+            </div>
+          </div>
+
+          <!-- Owner Quick Briefing Callout -->
+          <div class="briefing-owner-callout" style="margin: 0 0 16px 0;">
+            <div class="callout-title">
+              <span>💬 IN PLAIN WORDS (WHAT ${escapeHtml(senderName.toUpperCase())} WANTS):</span>
+              <span class="callout-intent">Goal: ${escapeHtml(orig.core_intent || orig.category || 'General')}</span>
+            </div>
+            <div class="callout-text" style="font-size: 0.9rem;">
+              "${escapeHtml(compressed)}"
+            </div>
+            <div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px;">
+              ${tasks.map(t => `<span class="ai-pill-tag" style="background: rgba(99,102,241,0.12); color: var(--accent-secondary); border-color: var(--border-active);">📋 ${escapeHtml(t)}</span>`).join('')}
             </div>
           </div>
 
@@ -498,7 +592,7 @@ async function loadApprovals() {
             <div class="col-reply">
               <div class="col-label">
                 <span>AI Proposed Response (Editable)</span>
-                <span style="color: var(--accent-secondary); font-size: 0.72rem;">✨ AI Generated</span>
+                <span style="color: var(--accent-secondary); font-size: 0.72rem;">✨ Addressed ${tasks.length} task(s)</span>
               </div>
               <textarea class="draft-textarea" id="draft-text-${draft.id}">${escapeHtml(draft.body)}</textarea>
             </div>
@@ -761,6 +855,8 @@ async function loadSettings() {
     const res = await fetch("/api/settings");
     const cfg = await res.json();
 
+    updateAIStatusPill(cfg);
+
     const acc = cfg.account || {};
     const ai = cfg.ai || {};
     const auto = cfg.automation || {};
@@ -776,7 +872,7 @@ async function loadSettings() {
 
     document.getElementById("setting-ai-provider").value = ai.provider || "gemini";
     document.getElementById("setting-gemini-key").value = "";
-    document.getElementById("setting-gemini-key").placeholder = ai.has_api_key ? (ai.gemini_api_key_masked + " (Encrypted)") : "AIzaSy... (Optional)";
+    document.getElementById("setting-gemini-key").placeholder = ai.has_api_key ? (ai.gemini_api_key_masked + " (Encrypted)") : "AIzaSy... (Enter to activate Gemini)";
     document.getElementById("setting-gemini-model").value = ai.model_name || "gemini-1.5-flash";
 
     document.getElementById("setting-auto-mode").value = auto.mode || "review_required";
@@ -862,6 +958,64 @@ async function testConnection() {
       resultDiv.style.color = "var(--accent-rose)";
       resultDiv.textContent = "Connection check failed: " + e.message;
     }
+  }
+}
+
+async function testAIConnection() {
+  const resultDiv = document.getElementById("test-ai-result");
+  const btn = document.getElementById("btn-test-ai");
+  if (resultDiv) {
+    resultDiv.style.display = "block";
+    resultDiv.style.color = "var(--accent-secondary)";
+    resultDiv.textContent = "Verifying AI connectivity and API key...";
+  }
+  if (btn) btn.disabled = true;
+
+  try {
+    const res = await fetch("/api/settings/test-ai", { method: "POST" });
+    const data = await res.json();
+    if (resultDiv) {
+      resultDiv.style.color = data.success ? "var(--accent-emerald)" : "var(--accent-rose)";
+      resultDiv.textContent = (data.success ? "✓ " : "✕ ") + data.message;
+    }
+    showToast(data.message, data.success ? "success" : "error");
+    const dot = document.getElementById("ai-status-dot");
+    const label = document.getElementById("ai-status-label");
+    if (dot && label && data.success) {
+      dot.style.backgroundColor = "var(--accent-emerald)";
+      dot.style.boxShadow = "0 0 8px var(--accent-emerald)";
+      label.textContent = "AI: Online & Verified";
+    }
+  } catch (e) {
+    if (resultDiv) {
+      resultDiv.style.color = "var(--accent-rose)";
+      resultDiv.textContent = "AI verification error: " + e.message;
+    }
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function updateAIStatusPill(cfg) {
+  const dot = document.getElementById("ai-status-dot");
+  const label = document.getElementById("ai-status-label");
+  if (!dot || !label) return;
+
+  const ai = cfg?.ai || {};
+  if (ai.provider === "gemini") {
+    if (ai.has_api_key) {
+      dot.style.backgroundColor = "var(--accent-emerald)";
+      dot.style.boxShadow = "0 0 8px var(--accent-emerald)";
+      label.textContent = `AI: Gemini (${ai.model_name || 'Flash'}) Active`;
+    } else {
+      dot.style.backgroundColor = "var(--accent-amber)";
+      dot.style.boxShadow = "0 0 8px var(--accent-amber)";
+      label.textContent = "AI: Gemini (Key Needed)";
+    }
+  } else {
+    dot.style.backgroundColor = "var(--accent-secondary)";
+    dot.style.boxShadow = "0 0 8px var(--accent-secondary)";
+    label.textContent = "AI: Smart Built-in Engine";
   }
 }
 

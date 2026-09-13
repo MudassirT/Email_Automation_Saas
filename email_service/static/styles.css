@@ -1201,3 +1201,230 @@ input:checked + .slider:before {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* =========================================================
+   AI EXECUTIVE BRIEFING & TASK AUTOMATION COMPONENTS
+   ========================================================= */
+
+/* Topbar AI Status Pill */
+.ai-status-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.ai-status-pill:hover {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.2);
+}
+
+.ai-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--accent-emerald);
+  box-shadow: 0 0 8px var(--accent-emerald);
+  transition: background-color var(--transition-fast);
+}
+
+.ai-status-dot.loading {
+  background-color: var(--accent-amber);
+  box-shadow: 0 0 8px var(--accent-amber);
+  animation: pulse 1.2s infinite;
+}
+
+/* Executive Briefing Container */
+.briefing-card {
+  background: linear-gradient(145deg, rgba(22, 28, 46, 0.95), rgba(15, 23, 42, 0.85));
+  border: 1px solid var(--border-active);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25), 0 0 20px rgba(99, 102, 241, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+[data-theme="light"] .briefing-card {
+  background: linear-gradient(145deg, #ffffff, #f8fafc);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.08);
+}
+
+/* Briefing Header */
+.briefing-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.sender-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sender-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-purple));
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.05rem;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+  flex-shrink: 0;
+}
+
+.sender-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.01em;
+}
+
+.sender-org {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* Plain Words Callout (For Account Owner) */
+.briefing-owner-callout {
+  background: rgba(99, 102, 241, 0.09);
+  border-left: 4px solid var(--accent-primary);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  padding: 14px 18px;
+  margin-bottom: 18px;
+}
+
+[data-theme="light"] .briefing-owner-callout {
+  background: rgba(99, 102, 241, 0.06);
+}
+
+.callout-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent-secondary);
+  margin-bottom: 6px;
+}
+
+.callout-intent {
+  background: rgba(6, 182, 212, 0.15);
+  color: var(--accent-secondary);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 0.7rem;
+}
+
+.callout-text {
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--text-main);
+  font-weight: 500;
+}
+
+/* Extracted Task Checklist */
+.task-checklist-box {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.task-checklist-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 10px;
+}
+
+.task-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.84rem;
+  color: var(--text-main);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface-elevated);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.task-checklist-item:hover {
+  background: rgba(99, 102, 241, 0.12);
+}
+
+.task-checklist-item input[type="checkbox"] {
+  accent-color: var(--accent-primary);
+  margin-top: 3px;
+  cursor: pointer;
+}
+
+/* AI Automated Actions Section */
+.ai-automated-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-pill-tag {
+  font-size: 0.72rem;
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--accent-emerald);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: var(--radius-full);
+  padding: 2px 9px;
+  font-weight: 500;
+}
+
+.btn-ai-execute {
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-purple));
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.btn-ai-execute:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.55);
+}

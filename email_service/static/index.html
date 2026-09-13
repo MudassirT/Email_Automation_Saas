@@ -85,6 +85,11 @@
         <h2 id="current-view-title">Overview Dashboard</h2>
       </div>
       <div class="topbar-actions">
+        <div class="ai-status-pill" id="ai-status-pill" onclick="switchView('settings')" title="AI Intelligence Engine — Click to configure API Key">
+          <span class="ai-status-dot" id="ai-status-dot"></span>
+          <span id="ai-status-label">AI: Ready</span>
+        </div>
+
         <button class="btn btn-secondary btn-sm" id="btn-theme-toggle" title="Toggle Light / Dark Mode" aria-label="Toggle theme">
           <span id="theme-icon">🌙</span>
           <span id="theme-text">Dark</span>
@@ -333,21 +338,32 @@
 
           <!-- Column 2: AI & Automation Mode -->
           <div class="card">
-            <h4 style="font-size: 1rem; margin-bottom: 14px; color: var(--accent-purple);">🤖 AI & Automation Rules</h4>
+            <h4 style="font-size: 1rem; margin-bottom: 8px; color: var(--accent-purple);">🤖 AI Intelligence & Task Automation</h4>
+            <div style="background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.25); border-radius: var(--radius-md); padding: 12px; margin-bottom: 16px; font-size: 0.8rem; line-height: 1.5; color: var(--text-muted);">
+              <strong style="color: #fff;">⚡ AI Executive Briefings & One-Click Execution:</strong>
+              Every incoming email is read by AI first. The AI identifies the sender & company, translates complex emails into a <strong style="color: var(--accent-secondary);">compressed plain-English briefing for the owner</strong>, extracts actionable tasks, and prepares replies for 1-click execution when your API key is configured.
+            </div>
 
             <div class="form-group">
               <label>AI Intelligence Provider</label>
               <select class="form-select" id="setting-ai-provider">
-                <option value="gemini">Google Gemini API (Recommended)</option>
-                <option value="built_in">Built-in Smart Natural Language Engine (Offline)</option>
+                <option value="gemini">Google Gemini API (Recommended for Cloud AI)</option>
+                <option value="built_in">Built-in Smart Natural Language Engine (Offline / Local)</option>
               </select>
             </div>
 
             <div class="form-group">
               <label>Gemini API Key</label>
               <input type="password" class="form-input" id="setting-gemini-key" placeholder="AIzaSy...">
-              <div class="form-help">Optional. If empty, the built-in smart engine runs automatically.</div>
+              <div class="form-help">Enter your API key from Google AI Studio to unlock full reasoning and multi-step task resolution. Encrypted on disk.</div>
             </div>
+
+            <div style="display: flex; gap: 10px; margin-bottom: 14px;">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-test-ai" style="width: 100%;">
+                <span>✨ Verify AI Connection & Key</span>
+              </button>
+            </div>
+            <div id="test-ai-result" style="margin-bottom: 14px; font-size: 0.82rem; display: none;"></div>
 
             <div class="form-group">
               <label>Gemini Model</label>

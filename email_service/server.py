@@ -366,6 +366,12 @@ def test_connection():
     return {"success": success, "message": msg}
 
 
+@app.post("/api/settings/test-ai")
+def test_ai():
+    success, msg = ai_engine.test_ai_connection()
+    return {"success": success, "message": msg}
+
+
 def run():
     uvicorn.run("email_service.server:app", host="127.0.0.1", port=8000, reload=False)
 

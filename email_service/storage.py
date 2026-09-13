@@ -64,6 +64,8 @@ INITIAL_SAMPLE_EMAILS = [
         "id": "msg_sample_01",
         "uid": "1001",
         "from": "Elena Rostova <elena.rostova@acmepartners.com>",
+        "sender_name": "Elena Rostova",
+        "sender_organization": "Acme Partners",
         "to": "you@domain.com",
         "subject": "Urgent: Contract clarification for Q4 Partnership agreement",
         "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -73,15 +75,30 @@ INITIAL_SAMPLE_EMAILS = [
         "priority": "Urgent",
         "sentiment": "Neutral",
         "summary": "Elena asks for urgent clarification on contract Section 4.2 regarding enterprise 24/7 escalation before signing tomorrow.",
+        "compressed_summary": "Elena Rostova (Acme Partners) needs clarification on whether enterprise support in Section 4.2 includes 24/7 dedicated escalation before signing tomorrow morning.",
+        "core_intent": "Contract SLA Clarification",
         "action_needed": True,
         "status": "unread",
         "draft_id": "draft_sample_01",
+        "tasks": [
+            "Clarify if enterprise support includes 24/7 dedicated escalation channels",
+            "Confirm SLA response time guarantee",
+            "Provide response before tomorrow morning for contract signing"
+        ],
+        "ai_automated_actions": [
+            "Ingested & analyzed by AI engine",
+            "Extracted 3 action items for owner",
+            "Auto-drafted response confirming Section 4.2 SLA",
+            "Queued in Approval Center for 1-click execution"
+        ],
         "created_at": datetime.now().isoformat()
     },
     {
         "id": "msg_sample_02",
         "uid": "1002",
         "from": "Marcus Vance <mvance@quantumcloud.io>",
+        "sender_name": "Marcus Vance",
+        "sender_organization": "QuantumCloud",
         "to": "you@domain.com",
         "subject": "Demo Request: Exploring AI Automation for our Operations",
         "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -91,9 +108,21 @@ INITIAL_SAMPLE_EMAILS = [
         "priority": "High",
         "sentiment": "Positive",
         "summary": "Marcus Vance requests a 20-minute demo for email automation this Thursday or Friday afternoon.",
+        "compressed_summary": "Marcus Vance (QuantumCloud) is requesting a 20-minute product demo for AI email automation with availability on Thursday or Friday afternoon.",
+        "core_intent": "Product Demo Request",
         "action_needed": True,
         "status": "unread",
         "draft_id": "draft_sample_02",
+        "tasks": [
+            "Schedule 20-minute email automation product demo",
+            "Provide team availability for Thursday or Friday afternoon"
+        ],
+        "ai_automated_actions": [
+            "Ingested & analyzed by AI engine",
+            "Identified sales opportunity for 400+ weekly inquiries",
+            "Drafted calendar availability response",
+            "Queued for owner review"
+        ],
         "created_at": datetime.now().isoformat()
     }
 ]

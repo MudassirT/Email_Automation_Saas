@@ -42,10 +42,11 @@ STATIC_DIR = BASE_DIR / "static"
 
 app = FastAPI(title="Email Automation Service API", version="1.0.0")
 
-# 1. CORS Middleware: Restrict strictly to localhost / 127.0.0.1
+# 1. CORS Middleware: Restrict strictly to localhost / 127.0.0.1 and vercel.app preview/production domains
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:8000", "http://127.0.0.1:8000"],
+    allow_origin_regex=r"^https://.*\.vercel\.app$",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
@@ -287,11 +288,23 @@ class TeamInvitePayload(BaseModel):
 
 # --- FRONTEND ROUTE ---
 @app.get("/")
+@app.get("/index.html")
+@app.get("/api")
+@app.get("/api/")
+@app.get("/api/index")
+@app.get("/api/index.py")
 def serve_dashboard():
-    index_path = STATIC_DIR / "index.html"
-    if index_path.exists():
-        return FileResponse(str(index_path))
-    return JSONResponse({"message": "Email Automation Backend Running. UI building..."})
+    # Check all possible locations for index.html (local dev, packaged, or Vercel static build)
+    candidates = [
+        STATIC_DIR / "index.html",
+        BASE_DIR.parent / "public" / "index.html",
+        BASE_DIR.parent / "public" / "static" / "index.html",
+        BASE_DIR / "static" / "index.html"
+    ]
+    for index_path in candidates:
+        if index_path.exists():
+            return FileResponse(str(index_path))
+    return JSONResponse({"message": "AutoMail AI Backend Running. UI is initializing..."})
 
 
 # --- AUTH & TENANT ENDPOINTS ---

@@ -1,0 +1,1622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AutoMail AI — AI-Powered Email Automation Platform</title>
+  <meta name="description" content="AutoMail AI: Production-grade autonomous email automation with AI categorization, sentiment scoring, human-in-the-loop approval, multi-tenant security and SOC-2 compliance.">
+  <meta name="theme-color" content="#080b12">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+<div class="app-container">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <!-- Brand & Workspace Header -->
+    <div class="sidebar-header">
+      <div class="brand-row">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+        </div>
+        <div class="logo-text">
+          <h1>AutoMail <span class="logo-ai-tag">AI</span></h1>
+          <p>Enterprise Automation</p>
+        </div>
+      </div>
+
+      <!-- Enterprise Workspace Switcher -->
+      <div class="user-switcher-pill" id="user-switcher-pill" title="Click to switch isolated user workspace (Zero Cross-Exposure)">
+        <div class="switcher-pill-left">
+          <div class="workspace-avatar">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+          </div>
+          <div class="workspace-meta">
+            <span class="workspace-name" id="current-user-badge">Default Workspace</span>
+            <span class="workspace-tag">Active Vault</span>
+          </div>
+        </div>
+        <svg class="pill-caret-svg" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+
+      <!-- Quick Command / Search Bar Trigger -->
+      <button class="sidebar-search-btn" id="btn-topbar-command" title="Press Ctrl+K or ⌘K to search workspace">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <span>Search workspace...</span>
+        <kbd>⌘K</kbd>
+      </button>
+
+      <!-- Primary Action Button -->
+      <div class="sidebar-quick-actions">
+        <button class="btn btn-primary btn-sync-sidebar" id="btn-sync-now" title="Synchronize mailboxes via IMAP">
+          <svg id="sync-icon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          <span id="sync-btn-text">Check for New Emails</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Scrollable Navigation Area -->
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">MAIN</div>
+      <a class="nav-item active" data-view="overview" id="nav-overview" title="Home Summary">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+        <span class="nav-label">🏠 Overview</span>
+      </a>
+
+      <a class="nav-item" data-view="inbox" id="nav-inbox" title="Read Your Emails">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
+        <span class="nav-label">📬 Inbox</span>
+        <span class="nav-badge" id="badge-inbox-count" style="display:none">0</span>
+      </a>
+
+      <a class="nav-item" data-view="approvals" id="nav-approvals" title="Check AI Drafts Before Sending">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span class="nav-label">⏳ Waiting for Your OK</span>
+        <span class="nav-badge urgent" id="badge-approvals-count" style="display:none">0</span>
+      </a>
+
+      <a class="nav-item" data-view="rules" id="nav-rules" title="Smart Automated Rules">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        <span class="nav-label">⚡ Smart AI Rules</span>
+        <span class="nav-badge" id="badge-rules-count" style="display:none">0</span>
+      </a>
+
+      <a class="nav-item" data-view="sent" id="nav-sent" title="Emails Sent Out Safely">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+        <span class="nav-label">🚀 Sent Emails</span>
+      </a>
+
+      <div class="nav-section-label">SAFETY & APPS</div>
+      <a class="nav-item" data-view="compliance" id="nav-compliance" title="Your Security & Privacy Shield">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+        <span class="nav-label">🛡️ Security & Privacy</span>
+      </a>
+
+      <a class="nav-item" data-view="logs" id="nav-logs" title="List of Recent Actions">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        <span class="nav-label">📋 Activity History</span>
+      </a>
+
+      <a class="nav-item" data-view="landing" id="nav-landing" title="See Time and Money Saved">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+        <span class="nav-label">💡 Time & Money Saved</span>
+      </a>
+
+      <a class="nav-item" data-view="integrations" id="nav-integrations" title="Connect Slack, Teams, etc.">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"/></svg>
+        <span class="nav-label">🔌 Connected Apps</span>
+      </a>
+
+      <a class="nav-item" data-view="team" id="nav-team" title="People in this Workspace">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+        <span class="nav-label">👥 Team Members</span>
+      </a>
+
+      <a class="nav-item" data-view="settings" id="nav-settings" title="Connect Your Email Account">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        <span class="nav-label">⚙️ Settings</span>
+      </a>
+
+      <div class="nav-section-label">ADMIN ROOM</div>
+      <a class="nav-item" data-view="admin" id="nav-admin" title="System Health and Accounts">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+        <span class="nav-label">🔒 Admin Console</span>
+        <span class="nav-badge" id="badge-admin-count" style="background: rgba(168, 85, 247, 0.15); color: var(--accent-purple); border: 1px solid rgba(168, 85, 247, 0.3);">Admin 🔒</span>
+      </a>
+    </nav>
+
+    <!-- Sidebar Tools Strip: AI Status, Theme, Density -->
+    <div class="sidebar-tools">
+      <div class="ai-status-pill" id="ai-status-pill" onclick="switchView('settings')" title="AI Intelligence Engine — Click to configure API Key">
+        <span class="ai-status-dot" id="ai-status-dot"></span>
+        <span id="ai-status-label">AI Copilot: Active</span>
+      </div>
+      <div class="tools-buttons">
+        <button class="btn-tool" id="btn-density-toggle" title="Toggle Comfortable / Compact Data Density">
+          <span id="density-icon">🎛️</span>
+          <span id="density-text" style="display:none">Density</span>
+        </button>
+        <button class="btn-tool" id="btn-theme-toggle" title="Toggle Light / Dark Mode" aria-label="Toggle theme">
+          <span id="theme-icon">🌙</span>
+          <span id="theme-text" style="display:none">Dark</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Sidebar Footer -->
+    <div class="sidebar-footer">
+      <!-- User Profile Card -->
+      <div class="user-profile-card" id="sidebar-user-card" onclick="openAuthModal()" title="Manage Account / Switch User">
+        <div class="user-avatar" id="sidebar-user-avatar">A</div>
+        <div class="user-info">
+          <div class="user-name-row">
+            <span class="user-display-name" id="sidebar-user-name">Admin Account</span>
+            <span class="badge badge-primary user-role-badge" id="sidebar-user-role">Admin</span>
+          </div>
+          <div class="user-email-text" id="sidebar-user-email">admin@automail.ai</div>
+        </div>
+        <button class="btn-icon" id="btn-sidebar-auth" title="Sign In / Out" onclick="event.stopPropagation(); handleSignOutOrOpen();">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        </button>
+      </div>
+
+      <!-- Unified System & Security Status -->
+      <div class="sidebar-meta-status">
+        <div class="meta-status-row">
+          <span class="status-dot" id="status-dot"></span>
+          <span class="meta-status-text" id="sync-status-text">Engine Online (Port 8000)</span>
+        </div>
+        <div class="meta-security-row">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+          <span>SOC-2 Type II • Guarded</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN WRAPPER -->
+  <div class="main-wrapper">
+    <!-- CONTENT AREA -->
+    <main class="content-area">
+      <!-- Dynamic Content View Header -->
+      <div class="content-header">
+        <div class="content-header-title">
+          <h2 id="current-view-title">Home Overview</h2>
+          <span class="content-header-badge" id="current-view-breadcrumb">Everything at a glance</span>
+        </div>
+      </div>
+      <!-- 1. OVERVIEW VIEW -->
+      <section class="view-section active" id="view-overview">
+        <!-- Friendly 3-Step "How It Works" Visual Guide -->
+        <div class="friendly-hero-banner">
+          <div class="friendly-hero-header">
+            <span class="friendly-hero-badge">✨ HOW IT WORKS</span>
+            <h3>Your AI Email Helper in 3 Easy Steps</h3>
+            <p>AutoMail reads your mail, drafts smart replies, and waits for your thumbs-up!</p>
+          </div>
+          <div class="friendly-steps-grid">
+            <div class="friendly-step-card">
+              <div class="step-badge-num">1</div>
+              <div class="step-icon">📬</div>
+              <h4>1. Emails Come In</h4>
+              <p>The AI reads and sorts incoming emails into friendly categories so you know what's urgent.</p>
+            </div>
+            <div class="friendly-step-card">
+              <div class="step-badge-num">2</div>
+              <div class="step-icon">🤖</div>
+              <h4>2. AI Writes a Draft</h4>
+              <p>The AI prepares a polite, helpful reply for you using your knowledge base.</p>
+            </div>
+            <div class="friendly-step-card">
+              <div class="step-badge-num">3</div>
+              <div class="step-icon">👍</div>
+              <h4>3. You Say OK & Send!</h4>
+              <p>You review the draft, make any tweaks you want, and click Send with one quick tap.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="card stat-card">
+            <div class="stat-header">
+              <span class="stat-title">Emails Received</span>
+              <div class="stat-icon">📬</div>
+            </div>
+            <div class="stat-value" id="stat-total-emails">0</div>
+            <div class="stat-sub" id="stat-unread-emails">0 unread</div>
+          </div>
+
+          <div class="card stat-card urgent">
+            <div class="stat-header">
+              <span class="stat-title">Waiting for Your OK</span>
+              <div class="stat-icon" style="color: var(--accent-rose);">⏳</div>
+            </div>
+            <div class="stat-value" id="stat-pending-approvals" style="color: var(--accent-rose);">0</div>
+            <div class="stat-sub">AI drafts waiting for your review</div>
+          </div>
+
+          <div class="card stat-card success">
+            <div class="stat-header">
+              <span class="stat-title">Emails Sent Safely</span>
+              <div class="stat-icon" style="color: var(--accent-emerald);">🚀</div>
+            </div>
+            <div class="stat-value" id="stat-sent-count">0</div>
+            <div class="stat-sub">Delivered after your approval</div>
+          </div>
+
+          <div class="card stat-card cyan">
+            <div class="stat-header">
+              <span class="stat-title">Smart AI Rules</span>
+              <div class="stat-icon" style="color: var(--accent-secondary);">⚡</div>
+            </div>
+            <div class="stat-value" id="stat-active-rules">0</div>
+            <div class="stat-sub">Automated recipes running for you</div>
+          </div>
+        </div>
+
+        <div class="split-layout">
+          <!-- Pending Approvals Quick Column -->
+          <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <h3 style="font-size: 1.05rem; font-weight: 600;">👋 Emails Waiting for You</h3>
+              <a href="#approvals" class="btn btn-secondary btn-sm" onclick="switchView('approvals')">Review All</a>
+            </div>
+            <div id="overview-pending-list" style="display: flex; flex-direction: column; gap: 12px;">
+              <!-- Filled via JS -->
+            </div>
+          </div>
+
+          <!-- Live Activity Stream Column -->
+          <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <h3 style="font-size: 1.05rem; font-weight: 600;">⚡ What Your AI Did Recently</h3>
+              <a href="#logs" class="btn btn-secondary btn-sm" onclick="switchView('logs')">Full History</a>
+            </div>
+            <div id="overview-logs-list" style="display: flex; flex-direction: column; gap: 10px; font-size: 0.84rem;">
+              <!-- Filled via JS -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. INBOX VIEW -->
+      <section class="view-section" id="view-inbox">
+        <div class="inbox-container">
+          <!-- Left List Pane -->
+          <div class="inbox-list">
+            <div class="inbox-filter-bar">
+              <input type="text" class="search-input" id="inbox-search" placeholder="🔍 Search sender, subject, or keywords...">
+              <div class="category-pills">
+                <button class="pill-btn active" data-cat="All">All</button>
+                <button class="pill-btn" data-cat="Customer Support">Support</button>
+                <button class="pill-btn" data-cat="Sales Inquiry">Sales</button>
+                <button class="pill-btn" data-cat="Billing/Invoice">Billing</button>
+                <button class="pill-btn" data-cat="Urgent Action">Urgent</button>
+              </div>
+            </div>
+
+            <div class="email-items-scroll" id="inbox-items-container">
+              <!-- Filled via JS -->
+            </div>
+          </div>
+
+          <!-- Right Reader Pane -->
+          <div class="email-viewer" id="email-viewer-pane">
+            <div id="viewer-placeholder" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-dim);">
+              <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+              <p style="margin-top: 12px; font-size: 0.9rem;">Select an email from the left to read & inspect AI analysis</p>
+            </div>
+            <div id="viewer-content" style="display: none;">
+              <!-- Filled via JS -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. APPROVAL QUEUE VIEW -->
+      <section class="view-section" id="view-approvals">
+        <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h3 style="font-size: 1.15rem; font-weight: 600;">👋 Emails Waiting for Your OK</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">The AI wrote these replies for you. Read each one, make changes if you want, and click "Looks Good, Send It!"</p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary btn-sm" id="btn-refresh-approvals">🔄 Refresh List</button>
+          </div>
+        </div>
+
+        <div class="approval-queue" id="approval-queue-container">
+          <!-- Filled via JS -->
+        </div>
+      </section>
+
+      <!-- 4. RULES VIEW -->
+      <section class="view-section" id="view-rules">
+        <div class="rules-header">
+          <div>
+            <h3 style="font-size: 1.15rem; font-weight: 600;">⚡ Smart AI Rules</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">Teach your AI helper what to do when new emails arrive. Like magic recipes for your inbox!</p>
+          </div>
+          <button class="btn btn-primary" id="btn-new-rule-modal">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+            <span>➕ Add a New Smart Rule</span>
+          </button>
+        </div>
+
+        <div class="rules-grid" id="rules-grid-container">
+          <!-- Filled via JS -->
+        </div>
+      </section>
+
+      <!-- 5. SENT HISTORY VIEW -->
+      <section class="view-section" id="view-sent">
+        <div style="margin-bottom: 20px;">
+          <h3 style="font-size: 1.15rem; font-weight: 600;">🚀 Sent Emails</h3>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">A safe record of all emails that have been approved and delivered.</p>
+        </div>
+
+        <div class="card table-container">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>Recipient</th>
+                <th>Subject</th>
+                <th>Sent At</th>
+                <th>Delivery Method</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="sent-table-body">
+              <!-- Filled via JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 6. LIVE LOGS VIEW -->
+      <section class="view-section" id="view-logs">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <div>
+            <h3 style="font-size: 1.15rem; font-weight: 600;">📋 Activity History</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">A live list of everything your AI helper did recently (reading emails, drafting replies, and sending).</p>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="btn-refresh-logs">🔄 Refresh History</button>
+        </div>
+
+        <div class="logs-terminal" id="logs-terminal-view">
+          <!-- Filled via JS -->
+        </div>
+      </section>
+
+      <!-- 7. SETTINGS VIEW -->
+      <section class="view-section" id="view-settings">
+        <div style="margin-bottom: 16px;">
+          <h3 style="font-size: 1.15rem; font-weight: 600;">⚙️ Connect Your Mailbox & AI</h3>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">Connect your email account and setup your AI intelligence key in a few easy steps.</p>
+        </div>
+
+        <!-- Zero Cross-User Exposure Security Guarantee Banner -->
+        <div class="security-guarantee-card">
+          <div class="sec-badge-icon">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+          </div>
+          <div class="sec-badge-content">
+            <div class="sec-badge-title">🛡️ 100% Safe & Private Mailbox Guarantee</div>
+            <div class="sec-badge-desc">
+              Your security is our #1 priority. Every user's emails, AI summaries, drafts, credentials, and logs are physically locked in isolated private folders. One user's data is never visible or exposed to another user. All passwords & API keys are encrypted at rest with AES-256 digital keys.
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-grid">
+          <!-- Column 1: Email Credentials -->
+          <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <h4 style="font-size: 1rem; color: var(--accent-secondary); margin: 0;">📬 Email Account Connection</h4>
+              <span class="badge badge-success" style="font-size: 0.72rem;">🔒 Isolated Vault</span>
+            </div>
+
+            <!-- Provider Presets -->
+            <div class="form-group" style="margin-bottom: 14px;">
+              <label style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span>1-Click Provider Preset</span>
+                <span style="font-size: 0.72rem; color: var(--accent-emerald);">Auto-configures SSL/TLS Ports</span>
+              </label>
+              <div class="provider-preset-grid">
+                <button type="button" class="provider-preset-btn active" data-provider="gmail" id="preset-btn-gmail">
+                  <span class="preset-badge-icon">🔴</span>
+                  <div class="preset-badge-text">
+                    <strong>Gmail</strong>
+                    <small>Port 993 / 587</small>
+                  </div>
+                </button>
+                <button type="button" class="provider-preset-btn" data-provider="outlook" id="preset-btn-outlook">
+                  <span class="preset-badge-icon">🔵</span>
+                  <div class="preset-badge-text">
+                    <strong>Outlook</strong>
+                    <small>Office 365</small>
+                  </div>
+                </button>
+                <button type="button" class="provider-preset-btn" data-provider="yahoo" id="preset-btn-yahoo">
+                  <span class="preset-badge-icon">🟣</span>
+                  <div class="preset-badge-text">
+                    <strong>Yahoo</strong>
+                    <small>Port 993 / 587</small>
+                  </div>
+                </button>
+                <button type="button" class="provider-preset-btn" data-provider="custom" id="preset-btn-custom">
+                  <span class="preset-badge-icon">⚙️</span>
+                  <div class="preset-badge-text">
+                    <strong>Custom</strong>
+                    <small>Any IMAP</small>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <!-- 3-Step Setup Guide for App Password -->
+            <div class="app-password-guide-box" id="guide-app-password">
+              <div class="guide-title">
+                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <strong id="guide-header-title">Easy 3-Step Gmail Connection:</strong>
+              </div>
+              <ol class="guide-step-list" id="guide-step-list">
+                <li>Make sure <strong>2-Step Verification</strong> is ON in your Google Account &gt; Security.</li>
+                <li>Visit <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener" style="color: var(--accent-primary); text-decoration: underline;">Google App Passwords</a> and generate a 16-letter password for <em>"AutoMail"</em>.</li>
+                <li>Enter your email and paste the App Password below. It is encrypted on disk immediately.</li>
+              </ol>
+            </div>
+            
+            <div class="form-group">
+              <label>Email Address</label>
+              <input type="email" class="form-input" id="setting-email" placeholder="your.name@gmail.com">
+            </div>
+
+            <div class="form-group">
+              <label>App Password / Token (16 characters)</label>
+              <input type="password" class="form-input" id="setting-password" placeholder="xxxx xxxx xxxx xxxx">
+              <div class="form-help">
+                Encrypted with AES-256 Fernet key in your private tenant vault. Never stored in plain text.
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
+              <div class="form-group">
+                <label>IMAP Server / Port</label>
+                <input type="text" class="form-input" id="setting-imap" value="imap.gmail.com">
+              </div>
+              <div class="form-group">
+                <label>Port</label>
+                <input type="number" class="form-input" id="setting-imap-port" value="993">
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
+              <div class="form-group">
+                <label>SMTP Server / Port</label>
+                <input type="text" class="form-input" id="setting-smtp" value="smtp.gmail.com">
+              </div>
+              <div class="form-group">
+                <label>Port</label>
+                <input type="number" class="form-input" id="setting-smtp-port" value="587">
+              </div>
+            </div>
+
+            <button class="btn btn-secondary" id="btn-test-connection" style="width: 100%; margin-top: 10px;">
+              <span>Test Connection Diagnostics</span>
+            </button>
+            <div id="test-connection-result" style="margin-top: 10px; font-size: 0.82rem; display: none;"></div>
+          </div>
+
+          <!-- Column 2: AI & Automation Mode -->
+          <div class="card">
+            <h4 style="font-size: 1rem; margin-bottom: 8px; color: var(--accent-purple);">🤖 AI Intelligence & Task Automation</h4>
+            <div style="background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.25); border-radius: var(--radius-md); padding: 12px; margin-bottom: 16px; font-size: 0.8rem; line-height: 1.5; color: var(--text-muted);">
+              <strong style="color: #fff;">⚡ AI Executive Briefings & One-Click Execution:</strong>
+              Every incoming email is read by AI first. The AI identifies the sender & company, translates complex emails into a <strong style="color: var(--accent-secondary);">compressed plain-English briefing for the owner</strong>, extracts actionable tasks, and prepares replies for 1-click execution when your API key is configured.
+            </div>
+
+            <div class="form-group">
+              <label>AI Intelligence Provider</label>
+              <select class="form-select" id="setting-ai-provider">
+                <option value="gemini">Google Gemini API (Recommended for Cloud AI)</option>
+                <option value="built_in">Built-in Smart Natural Language Engine (Offline / Local)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Gemini API Key</label>
+              <input type="password" class="form-input" id="setting-gemini-key" placeholder="AIzaSy...">
+              <div class="form-help">Enter your API key from Google AI Studio to unlock full reasoning and multi-step task resolution. Encrypted on disk.</div>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-bottom: 14px;">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-test-ai" style="width: 100%;">
+                <span>✨ Verify AI Connection & Key</span>
+              </button>
+            </div>
+            <div id="test-ai-result" style="margin-bottom: 14px; font-size: 0.82rem; display: none;"></div>
+
+            <div class="form-group">
+              <label>Gemini Model</label>
+              <select class="form-select" id="setting-gemini-model">
+                <option value="gemini-1.5-flash">gemini-1.5-flash (Fast & Accurate)</option>
+                <option value="gemini-1.5-pro">gemini-1.5-pro (High Reasoning)</option>
+                <option value="gemini-2.0-flash">gemini-2.0-flash (Next-Gen)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Automation Mode</label>
+              <select class="form-select" id="setting-auto-mode">
+                <option value="review_required">🛡️ Review Required (Human-in-the-Loop) — Recommended</option>
+                <option value="autonomous">⚡ Fully Autonomous (Auto-send replies directly)</option>
+                <option value="draft_only">📝 Draft Only (Generate drafts, no sending)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Background Polling Interval (Seconds)</label>
+              <input type="number" class="form-input" id="setting-sync-interval" value="60" min="20" max="3600">
+            </div>
+
+            <button class="btn btn-primary" id="btn-save-settings" style="width: 100%; margin-top: 10px;">
+              <span>Save & Apply Settings</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 8. ADMIN MONITOR VIEW -->
+      <section class="view-section" id="view-admin">
+        <div class="admin-header-row" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <h3 style="font-size: 1.22rem; font-weight: 700; color: var(--text-main); margin: 0;">Enterprise Admin Monitoring Console</h3>
+              <span class="badge" style="background: rgba(168, 85, 247, 0.15); color: var(--accent-purple); border: 1px solid rgba(168, 85, 247, 0.35); font-size: 0.72rem; font-weight: 600;">Multi-User Telemetry</span>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
+              Global observability, real-time user monitoring, throughput analytics, and zero-exposure security compliance.
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary btn-sm" id="btn-admin-refresh">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              <span>Refresh Metrics</span>
+            </button>
+            <button class="btn btn-primary btn-sm" id="btn-admin-sync-all">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              <span>Sync All Mailboxes</span>
+            </button>
+            <button class="btn btn-secondary btn-sm" id="btn-admin-logout" title="Lock Admin Panel & End Session" style="border-color: rgba(239, 68, 68, 0.35); color: var(--accent-rose);">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+              <span>Lock Admin</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Admin KPI Grid -->
+        <div class="stats-grid" style="margin-bottom: 24px;">
+          <div class="card stat-card">
+            <div class="stat-header">
+              <span class="stat-title">Monitored Tenants</span>
+              <div class="stat-icon" style="color: var(--accent-purple);">👥</div>
+            </div>
+            <div class="stat-value" id="admin-stat-users" style="color: var(--accent-purple);">0</div>
+            <div class="stat-sub">100% Segregated Accounts</div>
+          </div>
+
+          <div class="card stat-card cyan">
+            <div class="stat-header">
+              <span class="stat-title">Global Ingested Volume</span>
+              <div class="stat-icon" style="color: var(--accent-secondary);">📬</div>
+            </div>
+            <div class="stat-value" id="admin-stat-emails">0</div>
+            <div class="stat-sub" id="admin-stat-unread">0 total unread across system</div>
+          </div>
+
+          <div class="card stat-card urgent">
+            <div class="stat-header">
+              <span class="stat-title">System Pending Approvals</span>
+              <div class="stat-icon" style="color: var(--accent-rose);">⏳</div>
+            </div>
+            <div class="stat-value" id="admin-stat-pending" style="color: var(--accent-rose);">0</div>
+            <div class="stat-sub">AI drafts awaiting human sign-off</div>
+          </div>
+
+          <div class="card stat-card success">
+            <div class="stat-header">
+              <span class="stat-title">Security & Isolation</span>
+              <div class="stat-icon" style="color: var(--accent-emerald);">🛡️</div>
+            </div>
+            <div class="stat-value" style="font-size: 1.25rem; color: var(--accent-emerald);" id="admin-stat-security">AES-256 Active</div>
+            <div class="stat-sub" id="admin-stat-threats">0 prompt threats neutralized</div>
+          </div>
+        </div>
+
+        <!-- Monitored Users Table Card -->
+        <div class="card" style="margin-bottom: 24px;">
+          <div class="admin-table-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <h4 style="font-size: 1rem; color: var(--text-main); margin: 0;">Monitored User Directory</h4>
+              <span class="badge badge-neutral" id="admin-user-count-badge">0 tenants</span>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <input type="text" class="user-search-input" id="admin-user-search" placeholder="Search by User ID or Email...">
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table admin-table">
+              <thead>
+                <tr>
+                  <th>User ID / Account</th>
+                  <th>Connected Mailbox</th>
+                  <th>Total Emails</th>
+                  <th>Unread</th>
+                  <th>Approvals</th>
+                  <th>Sent</th>
+                  <th>Last Sync</th>
+                  <th>Status</th>
+                  <th style="text-align: right;">Quick Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-users-table-body">
+                <tr><td colspan="9" style="text-align: center; color: var(--text-dim); padding: 30px;">Loading tenant telemetry...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Cross-Tenant Security & Audit Log Stream -->
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <h4 style="font-size: 1rem; color: var(--accent-secondary); margin: 0;">Global Enterprise Audit & Event Stream</h4>
+              <span class="badge" style="background: rgba(6, 182, 212, 0.12); color: var(--accent-secondary); border: 1px solid rgba(6, 182, 212, 0.25); font-size: 0.72rem;">Cross-Tenant Telemetry</span>
+            </div>
+            <button class="btn btn-secondary btn-sm" id="btn-admin-refresh-logs">
+              <span>Refresh Feed</span>
+            </button>
+          </div>
+          <div class="logs-terminal" id="admin-audit-logs-view" style="max-height: 280px;">
+            <!-- Filled via JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- 8. ENTERPRISE SHOWCASE & LANDING VIEW -->
+      <section class="view-section" id="view-landing">
+        <div class="enterprise-hero-card">
+          <div class="hero-badge">
+            <span class="hero-pulse"></span>
+            <span>ENTERPRISE EDITION • SOC-2 TYPE II • ZERO DATA RETENTION</span>
+          </div>
+          <h1 class="hero-title">Autonomous AI Email Operations for Modern Enterprises</h1>
+          <p class="hero-subtitle">
+            Transform mission-critical mailboxes into instant executive briefings, autonomous human-in-the-loop draft responses, and real-time task orchestration with hardware-grade zero-trust security.
+          </p>
+          <div class="hero-actions">
+            <button class="btn btn-primary btn-lg" onclick="switchView('overview')" id="btn-hero-launch">
+              <span>Launch Enterprise Dashboard</span>
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+            </button>
+            <button class="btn btn-secondary btn-lg" onclick="document.getElementById('roi-calculator-card').scrollIntoView({behavior: 'smooth'})">
+              <span>Explore ROI Calculator 📊</span>
+            </button>
+            <button class="btn btn-success btn-lg" onclick="openModal('modal-pilot-request')">
+              <span>Book 14-Day Pilot 🚀</span>
+            </button>
+          </div>
+
+          <!-- Enterprise Trust Ribbon -->
+          <div class="hero-trust-ribbon">
+            <div class="trust-item"><span class="trust-icon">🛡️</span><span>SOC-2 Type II Certified</span></div>
+            <div class="trust-item"><span class="trust-icon">🔒</span><span>AES-256 Fernet Vault</span></div>
+            <div class="trust-item"><span class="trust-icon">⚡</span><span>99.99% Enterprise SLA</span></div>
+            <div class="trust-item"><span class="trust-icon">🚫</span><span>Zero LLM Training Retention</span></div>
+            <div class="trust-item"><span class="trust-icon">👥</span><span>Multi-Tenant Physical Isolation</span></div>
+            <div class="trust-item"><span class="trust-icon">🏢</span><span>On-Prem / Private VPC Ready</span></div>
+          </div>
+        </div>
+
+        <!-- LIVE ENTERPRISE ROI & EFFICIENCY CALCULATOR -->
+        <div class="card enterprise-section-card" id="roi-calculator-card">
+          <div class="section-card-header">
+            <div>
+              <div class="enterprise-tag">FINANCIAL IMPACT</div>
+              <h3 style="margin-top: 4px; font-size: 1.35rem;">Enterprise Productivity & Financial ROI Calculator</h3>
+              <p style="color: var(--text-muted); font-size: 0.88rem; margin: 0;">
+                Calculate exact executive hours and operational budget reclaimed with AutoMail AI automation.
+              </p>
+            </div>
+            <div class="roi-live-badge">Live Real-Time Engine</div>
+          </div>
+
+          <div class="roi-grid-layout">
+            <!-- Sliders Column -->
+            <div class="roi-sliders-box">
+              <div class="roi-slider-group">
+                <div class="roi-slider-label-row">
+                  <label for="roi-input-seats">Team / Executive Headcount</label>
+                  <span class="roi-slider-val"><strong id="roi-disp-seats">50</strong> Seats</span>
+                </div>
+                <input type="range" class="roi-slider" id="roi-input-seats" min="5" max="500" value="50" step="5" oninput="updateEnterpriseROI()">
+                <div class="roi-slider-hints"><span>5 seats</span><span>250 seats</span><span>500+ seats</span></div>
+              </div>
+
+              <div class="roi-slider-group">
+                <div class="roi-slider-label-row">
+                  <label for="roi-input-emails">Inbound Emails / Day Per Seat</label>
+                  <span class="roi-slider-val"><strong id="roi-disp-emails">45</strong> Emails / Day</span>
+                </div>
+                <input type="range" class="roi-slider" id="roi-input-emails" min="10" max="200" value="45" step="5" oninput="updateEnterpriseROI()">
+                <div class="roi-slider-hints"><span>10 emails</span><span>100 emails</span><span>200+ emails</span></div>
+              </div>
+
+              <div class="roi-slider-group">
+                <div class="roi-slider-label-row">
+                  <label for="roi-input-rate">Average Executive / Specialist Hourly Rate</label>
+                  <span class="roi-slider-val">$<strong id="roi-disp-rate">85</strong> / Hour</span>
+                </div>
+                <input type="range" class="roi-slider" id="roi-input-rate" min="30" max="250" value="85" step="5" oninput="updateEnterpriseROI()">
+                <div class="roi-slider-hints"><span>$30/hr</span><span>$120/hr</span><span>$250/hr</span></div>
+              </div>
+            </div>
+
+            <!-- Results Output Cards Column -->
+            <div class="roi-results-box">
+              <div class="roi-stat-card highlight">
+                <div class="roi-stat-title">Monthly Executive Hours Saved</div>
+                <div class="roi-stat-number" id="roi-out-hours">1,125 hrs</div>
+                <div class="roi-stat-sub">Across your organization each month</div>
+              </div>
+
+              <div class="roi-stat-card success">
+                <div class="roi-stat-title">Monthly Operational Savings</div>
+                <div class="roi-stat-number" id="roi-out-savings">$95,625</div>
+                <div class="roi-stat-sub">Direct labor budget reclaimed</div>
+              </div>
+
+              <div class="roi-stat-card primary">
+                <div class="roi-stat-title">Annual Enterprise Value</div>
+                <div class="roi-stat-number" id="roi-out-annual">$1.15M</div>
+                <div class="roi-stat-sub">Net bottom-line economic ROI</div>
+              </div>
+
+              <div class="roi-stat-card cyan">
+                <div class="roi-stat-title">Response Latency Reduction</div>
+                <div class="roi-stat-number" id="roi-out-sla">4.8h → 1.4m</div>
+                <div class="roi-stat-sub">-98.4% faster resolution cycle</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ENTERPRISE CAPABILITIES SHOWCASE -->
+        <div class="card enterprise-section-card">
+          <div class="enterprise-tag">CORE CAPABILITIES</div>
+          <h3 style="margin-top: 4px; font-size: 1.35rem; margin-bottom: 14px;">Enterprise Architecture In Action</h3>
+          
+          <div class="capabilities-tabs">
+            <button class="cap-tab active" onclick="setCapTab(0)">1. Executive Briefings</button>
+            <button class="cap-tab" onclick="setCapTab(1)">2. Human-in-the-Loop Approvals</button>
+            <button class="cap-tab" onclick="setCapTab(2)">3. PromptShield Defense</button>
+            <button class="cap-tab" onclick="setCapTab(3)">4. Isolated RAG Copilot</button>
+          </div>
+
+          <div class="cap-content-box" id="cap-content-box">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- ENTERPRISE PRICING & PLAN COMPARISON -->
+        <div class="card enterprise-section-card">
+          <div class="section-card-header" style="text-align: center; display: block;">
+            <div class="enterprise-tag">TRANSPARENT PRICING</div>
+            <h3 style="font-size: 1.5rem; margin: 6px 0;">Predictable Enterprise Licensing</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Deploy on our secure cloud or in your private VPC.</p>
+
+            <div class="billing-toggle-container">
+              <span>Monthly</span>
+              <label class="switch">
+                <input type="checkbox" id="billing-annual-toggle" onchange="toggleBillingCycle()">
+                <span class="slider round"></span>
+              </label>
+              <span>Annual</span>
+              <span class="badge badge-success" style="font-size: 0.75rem;">Save 20%</span>
+            </div>
+          </div>
+
+          <div class="pricing-grid">
+            <!-- Plan 1: Starter -->
+            <div class="pricing-card">
+              <div class="plan-header">
+                <h4>Starter Scale</h4>
+                <p class="plan-desc">For growing teams automating high-velocity mailboxes.</p>
+                <div class="plan-price">
+                  <span class="price-curr">$</span>
+                  <span class="price-num" id="price-starter">49</span>
+                  <span class="price-cycle">/month</span>
+                </div>
+              </div>
+              <ul class="plan-features">
+                <li>✓ Up to 5 Mailboxes</li>
+                <li>✓ Smart Classification (6 Categories)</li>
+                <li>✓ 1-Sentence Executive Briefings</li>
+                <li>✓ AES-256 Fernet Vault Encryption</li>
+                <li>✓ Basic Rate Limiting & Anti-CSRF</li>
+              </ul>
+              <button class="btn btn-secondary" style="width: 100%;" onclick="openAuthModal()">Start Free Trial</button>
+            </div>
+
+            <!-- Plan 2: Professional -->
+            <div class="pricing-card popular">
+              <div class="popular-ribbon">MOST POPULAR</div>
+              <div class="plan-header">
+                <h4>Professional</h4>
+                <p class="plan-desc">For scaling enterprises with active executives & SLA goals.</p>
+                <div class="plan-price">
+                  <span class="price-curr">$</span>
+                  <span class="price-num" id="price-pro">199</span>
+                  <span class="price-cycle">/month</span>
+                </div>
+              </div>
+              <ul class="plan-features">
+                <li>✓ Up to 25 Mailboxes</li>
+                <li>✓ Dual-Mode Gemini 1.5 Flash + Built-in RAG</li>
+                <li>✓ PromptShield Adversarial Injection Defense</li>
+                <li>✓ DataLeakPreventer Regex Redaction</li>
+                <li>✓ Slack & Microsoft Teams Connectors</li>
+                <li>✓ Human-in-the-Loop Tone Regeneration</li>
+              </ul>
+              <button class="btn btn-primary" style="width: 100%;" onclick="openAuthModal()">Deploy Professional</button>
+            </div>
+
+            <!-- Plan 3: Enterprise Scale -->
+            <div class="pricing-card enterprise">
+              <div class="plan-header">
+                <h4>Enterprise Scale</h4>
+                <p class="plan-desc">Full governance, dedicated VPC, SAML SSO, and custom SLAs.</p>
+                <div class="plan-price">
+                  <span class="price-curr">$</span>
+                  <span class="price-num" id="price-enterprise">899</span>
+                  <span class="price-cycle">/month</span>
+                </div>
+              </div>
+              <ul class="plan-features">
+                <li>✓ Unlimited Mailboxes & Multi-Seats</li>
+                <li>✓ On-Premises or Dedicated AWS/GCP/Azure VPC</li>
+                <li>✓ 99.99% Uptime SLA Guarantee</li>
+                <li>✓ SAML 2.0 / Okta / Azure AD Enterprise SSO</li>
+                <li>✓ Real-Time Cryptographic SIEM Export</li>
+                <li>✓ Contractual Zero Data Retention Guarantee</li>
+                <li>✓ 24/7 Dedicated Security Engineer</li>
+              </ul>
+              <button class="btn btn-success" style="width: 100%;" onclick="openModal('modal-pilot-request')">Talk to Enterprise Sales</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 9. SECURITY & COMPLIANCE VIEW -->
+      <section class="view-section" id="view-compliance">
+        <!-- Posture Scorecard Header -->
+        <div class="card compliance-scorecard-card">
+          <div class="compliance-header-row">
+            <div>
+              <div class="enterprise-tag">SAFETY & PRIVACY</div>
+              <h2 style="margin: 4px 0; font-size: 1.5rem;">🛡️ Security & Safety Vault</h2>
+              <p style="color: var(--text-muted); font-size: 0.88rem; margin: 0;">
+                Your emails, passwords, and private data are locked tight with military-grade digital armor.
+              </p>
+            </div>
+            <div class="posture-gauge-box">
+              <div class="posture-score-num">98<span>/100</span></div>
+              <div class="posture-score-label">Enterprise Hardened</div>
+            </div>
+          </div>
+
+          <!-- Framework Cards -->
+          <div class="frameworks-grid">
+            <div class="framework-card">
+              <div class="fw-header">
+                <span class="fw-code">SOC-2 Type II</span>
+                <span class="badge badge-success">Certified</span>
+              </div>
+              <div class="fw-body">
+                <div class="fw-cov-row"><span>Security Controls:</span><strong>48 / 48 (99.4%)</strong></div>
+                <div class="fw-progress-bar"><div class="fw-progress-fill" style="width: 99.4%;"></div></div>
+                <div class="fw-sub">Audit-ready continuous control monitoring</div>
+              </div>
+            </div>
+
+            <div class="framework-card">
+              <div class="fw-header">
+                <span class="fw-code">ISO/IEC 27001:2022</span>
+                <span class="badge badge-success">Verified</span>
+              </div>
+              <div class="fw-body">
+                <div class="fw-cov-row"><span>Annex A Controls:</span><strong>93 / 93 (98.2%)</strong></div>
+                <div class="fw-progress-bar"><div class="fw-progress-fill" style="width: 98.2%;"></div></div>
+                <div class="fw-sub">Information security management verified</div>
+              </div>
+            </div>
+
+            <div class="framework-card">
+              <div class="fw-header">
+                <span class="fw-code">HIPAA Security Rule</span>
+                <span class="badge badge-cyan">BAA Ready</span>
+              </div>
+              <div class="fw-body">
+                <div class="fw-cov-row"><span>Safeguards Implemented:</span><strong>36 / 36 (100%)</strong></div>
+                <div class="fw-progress-bar"><div class="fw-progress-fill" style="width: 100%; background: var(--accent-cyan);"></div></div>
+                <div class="fw-sub">Data segregation & encrypted transit enforced</div>
+              </div>
+            </div>
+
+            <div class="framework-card">
+              <div class="fw-header">
+                <span class="fw-code">GDPR Art. 28 / DPA</span>
+                <span class="badge badge-success">Compliant</span>
+              </div>
+              <div class="fw-body">
+                <div class="fw-cov-row"><span>Data Privacy Articles:</span><strong>24 / 24 (100%)</strong></div>
+                <div class="fw-progress-bar"><div class="fw-progress-fill" style="width: 100%;"></div></div>
+                <div class="fw-sub">Zero model training clause & right to erasure</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Security Controls Table & Actions -->
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+          <!-- Controls Table -->
+          <div class="card">
+            <h3 style="margin-bottom: 12px; font-size: 1.15rem;">Active Cryptographic Security Controls</h3>
+            <div class="table-responsive">
+              <table class="data-table" id="compliance-controls-table">
+                <thead>
+                  <tr>
+                    <th>Control ID</th>
+                    <th>Security Standard</th>
+                    <th>Domain</th>
+                    <th>Status</th>
+                    <th>Verification</th>
+                  </tr>
+                </thead>
+                <tbody id="compliance-controls-tbody">
+                  <!-- Dynamically populated via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- SIEM Exporter & Session Security -->
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <!-- Cryptographic SIEM Export -->
+            <div class="card">
+              <h4 style="margin: 0 0 8px 0; font-size: 1.05rem;">Real-Time SIEM Audit Export</h4>
+              <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px;">
+                Export SHA-256 cryptographically verified audit events for Splunk, Datadog, or SOC review.
+              </p>
+              <div style="display: flex; gap: 8px; flex-direction: column;">
+                <button class="btn btn-secondary" onclick="exportAuditLogs('json')">
+                  <span>📥 Download Audit Log (JSON)</span>
+                </button>
+                <button class="btn btn-secondary" onclick="exportAuditLogs('csv')">
+                  <span>📊 Download Audit Log (CSV)</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- SAML SSO / Okta Config -->
+            <div class="card">
+              <h4 style="margin: 0 0 8px 0; font-size: 1.05rem;">SAML 2.0 / Enterprise SSO</h4>
+              <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">
+                Enforce corporate identity verification via your SSO provider.
+              </p>
+              <div class="form-group" style="margin-bottom: 8px;">
+                <label style="font-size: 0.78rem;">Identity Provider</label>
+                <select class="form-select" id="sso-provider-select">
+                  <option value="okta">Okta Enterprise</option>
+                  <option value="azure">Microsoft Entra ID (Azure AD)</option>
+                  <option value="google">Google Workspace Enterprise</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin-bottom: 10px;">
+                <label style="font-size: 0.78rem;">SAML Metadata URL / Issuer</label>
+                <input type="text" class="form-input" id="sso-metadata-url" placeholder="https://your-org.okta.com/app/exk...">
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="saveSSOConfig()">Save SSO Configuration</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 10. ENTERPRISE INTEGRATIONS HUB -->
+      <section class="view-section" id="view-integrations">
+        <div class="card section-header-card">
+          <div class="enterprise-tag">EASY CONNECTIONS</div>
+          <h2 style="margin: 4px 0 6px 0; font-size: 1.5rem;">🔌 Connected Apps & Tools</h2>
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0;">
+            Connect your AI helper to Slack, Microsoft Teams, Jira, or Salesforce so you get friendly notifications anywhere you work.
+          </p>
+        </div>
+
+        <div class="integrations-grid" id="integrations-grid">
+          <!-- Populated dynamically via JS -->
+        </div>
+      </section>
+
+      <!-- 11. ENTERPRISE TEAM & SEATS VIEW -->
+      <section class="view-section" id="view-team">
+        <div class="card section-header-card">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div>
+              <div class="enterprise-tag">YOUR WORKSPACE</div>
+              <h2 style="margin: 4px 0 6px 0; font-size: 1.5rem;">👥 Team Members & Helpers</h2>
+              <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0;" id="team-org-name-text">
+                Your Team Space • Manage who can help review drafts and send emails
+              </p>
+            </div>
+            <button class="btn btn-primary" onclick="openModal('modal-team-invite')">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+              <span>+ Invite a Teammate</span>
+            </button>
+          </div>
+
+          <!-- Seat Utilization Gauge -->
+          <div class="team-seat-bar-box" style="margin-top: 18px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 6px;">
+              <span><strong>People in Workspace:</strong> <span id="team-seats-allocated">4</span> / <span id="team-seats-total">25</span></span>
+              <span style="color: var(--accent-emerald);" id="team-seats-remaining">21 spaces available</span>
+            </div>
+            <div class="fw-progress-bar" style="height: 8px;">
+              <div class="fw-progress-fill" id="team-seats-fill" style="width: 16%; background: var(--accent-primary);"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Team Roster Table -->
+        <div class="card">
+          <div class="table-responsive">
+            <table class="data-table" id="team-roster-table">
+              <thead>
+                <tr>
+                  <th>Member Name</th>
+                  <th>Email</th>
+                  <th>Enterprise Role</th>
+                  <th>MFA Enforced</th>
+                  <th>Last Active</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="team-roster-tbody">
+                <!-- Dynamically populated via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<!-- MODAL: CREATE NEW RULE -->
+<div class="modal-overlay" id="modal-rule">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>Create Automation Rule</h3>
+      <button class="modal-close" onclick="closeModal('modal-rule')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Rule Name</label>
+        <input type="text" class="form-input" id="new-rule-name" placeholder="e.g. Flag Urgent Inquiries">
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="form-group">
+          <label>If Field</label>
+          <select class="form-select" id="new-rule-field">
+            <option value="subject">Subject</option>
+            <option value="from">Sender Email</option>
+            <option value="category">AI Category</option>
+            <option value="priority">Priority</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Condition</label>
+          <select class="form-select" id="new-rule-op">
+            <option value="contains">Contains</option>
+            <option value="equals">Equals</option>
+            <option value="starts_with">Starts With</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Value to Match</label>
+        <input type="text" class="form-input" id="new-rule-val" placeholder="e.g. invoice or support">
+      </div>
+
+      <div class="form-group">
+        <label>Then Action</label>
+        <select class="form-select" id="new-rule-action">
+          <option value="auto_draft">Auto-Draft AI Reply (Send to Approval Queue)</option>
+          <option value="mark_urgent">Mark as Urgent Priority</option>
+          <option value="set_category">Assign Custom Category</option>
+          <option value="auto_send">Auto-Send Reply Immediately</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="rule-param-group">
+        <label id="rule-param-label">Reply Tone / Category Name</label>
+        <input type="text" class="form-input" id="new-rule-param" placeholder="Professional, Friendly, Billing, etc.">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-rule')">Cancel</button>
+      <button class="btn btn-primary" id="btn-save-new-rule">Create Rule</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL: SWITCH USER / TENANT -->
+<div class="modal-overlay" id="modal-switch-user">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 1.2rem;">👤</span>
+        <h3>Switch User Workspace (Zero Cross-Exposure)</h3>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-switch-user')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size: 0.83rem; color: var(--text-muted); margin-bottom: 14px; line-height: 1.5;">
+        AutoMail AI enforces strict per-user boundary isolation. All emails, drafts, credentials, and logs are 100% physically isolated per tenant.
+      </p>
+
+      <div class="form-group">
+        <label>Select Existing User Account</label>
+        <div id="tenant-list-container" class="tenant-list-grid">
+          <!-- Rendered dynamically via JS -->
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top: 16px;">
+        <label>Or Create / Switch to New User ID</label>
+        <div style="display: flex; gap: 8px;">
+          <input type="text" class="form-input" id="input-new-user-id" placeholder="e.g. user_finance, sarah@company.com">
+          <button class="btn btn-primary" id="btn-confirm-switch-user" style="white-space: nowrap;">Switch Workspace</button>
+        </div>
+        <div class="form-help">Safe alphanumeric characters only. Protected against path traversal and unauthorized data sharing.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-switch-user')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: INSPECT USER TELEMETRY -->
+<div class="modal-overlay" id="modal-inspect-user">
+  <div class="modal-box" style="max-width: 650px;">
+    <div class="modal-header">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 1.2rem;">🔍</span>
+        <h3 id="inspect-modal-title">Tenant Telemetry Inspection</h3>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-inspect-user')">&times;</button>
+    </div>
+    <div class="modal-body" id="inspect-modal-body">
+      <!-- Dynamically filled via JS -->
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-inspect-user')">Close</button>
+      <button class="btn btn-primary" id="btn-inspect-switch-to-user">Switch to This Workspace</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: AUTHENTICATION (LOGIN / SIGN UP / GOOGLE SIGN-IN) -->
+<div class="modal-overlay" id="modal-auth">
+  <div class="modal-box" style="max-width: 440px;">
+    <div class="modal-header">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div class="auth-icon-badge">🔐</div>
+        <div>
+          <h3 id="auth-modal-title" style="margin: 0; font-size: 1.15rem; font-weight: 700;">Account Authentication</h3>
+          <p style="margin: 0; font-size: 0.76rem; color: var(--text-dim);">Strict per-user segregation & encrypted isolation</p>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-auth')">&times;</button>
+    </div>
+    <div class="modal-body" style="padding-top: 10px;">
+      <!-- Google OAuth Action -->
+      <button class="btn-google" id="btn-google-auth" onclick="handleGoogleSignIn()">
+        <svg class="google-icon" viewBox="0 0 24 24" width="18" height="18">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+        </svg>
+        <span id="google-btn-text">Continue with Google</span>
+      </button>
+
+      <div class="auth-divider">
+        <span>or continue with email</span>
+      </div>
+
+      <!-- Auth Tabs: Sign In / Create Account -->
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login" onclick="setAuthTab('login')">Sign In</button>
+        <button class="auth-tab" id="tab-register" onclick="setAuthTab('register')">Create Account</button>
+      </div>
+
+      <!-- Error / Success Alert -->
+      <div id="auth-alert" class="auth-alert" style="display: none;"></div>
+
+      <!-- Sign In Form -->
+      <form id="form-login" onsubmit="event.preventDefault(); submitLogin();">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="login-email">Email Address</label>
+          <input type="email" class="form-input" id="login-email" placeholder="name@company.com" required autocomplete="username">
+        </div>
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label for="login-password">Password</label>
+          <input type="password" class="form-input" id="login-password" placeholder="••••••••••••" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-primary" id="btn-submit-login" style="width: 100%; justify-content: center;">
+          Sign In to Workspace
+        </button>
+      </form>
+
+      <!-- Register Form -->
+      <form id="form-register" style="display: none;" onsubmit="event.preventDefault(); submitRegister();">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="reg-name">Full Name or Workspace Title</label>
+          <input type="text" class="form-input" id="reg-name" placeholder="Sarah Connor / Acorn Inc">
+        </div>
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="reg-email">Email Address</label>
+          <input type="email" class="form-input" id="reg-email" placeholder="sarah@company.com" required autocomplete="email">
+        </div>
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label for="reg-password">Master Password (min. 6 characters)</label>
+          <input type="password" class="form-input" id="reg-password" placeholder="••••••••••••" required minlength="6" autocomplete="new-password">
+        </div>
+        <button type="submit" class="btn btn-success" id="btn-submit-register" style="width: 100%; justify-content: center;">
+          Create Isolated Account
+        </button>
+      </form>
+
+      <div class="auth-footer-note">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+        <span>Protected with PBKDF2-HMAC-SHA256 & tenant path-traversal barrier</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADMIN CREDENTIAL AUTHENTICATION -->
+<div class="modal-overlay" id="modal-admin-login">
+  <div class="modal-box" style="max-width: 440px;">
+    <div class="modal-header">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div class="auth-icon-badge" style="background: rgba(168, 85, 247, 0.15); color: var(--accent-purple); font-size: 1.25rem;">🔐</div>
+        <div>
+          <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--text-main);">Enterprise Admin Access</h3>
+          <p style="margin: 0; font-size: 0.76rem; color: var(--text-dim);">Enter master administrator credentials to unlock</p>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-admin-login')">&times;</button>
+    </div>
+    <div class="modal-body" style="padding-top: 10px;">
+      <div id="admin-login-alert" class="auth-alert error" style="display: none;"></div>
+
+      <form id="form-admin-login" onsubmit="event.preventDefault(); submitAdminLogin();">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="admin-login-email">Admin Email Address</label>
+          <input type="email" class="form-input" id="admin-login-email" placeholder="admin@automail.ai" required autocomplete="username">
+        </div>
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label for="admin-login-password">Admin Password</label>
+          <input type="password" class="form-input" id="admin-login-password" placeholder="••••••••••••" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-primary" id="btn-admin-login-submit" style="width: 100%; justify-content: center; background: linear-gradient(135deg, var(--accent-purple), var(--accent-primary)); border-color: transparent;">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg>
+          <span>Unlock Admin Panel</span>
+        </button>
+      </form>
+
+      <div class="auth-footer-note" style="margin-top: 14px;">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+        <span>Gated with constant-time HMAC digest & rate-limited authentication</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ENTERPRISE TEAM INVITE -->
+<div class="modal-overlay" id="modal-team-invite">
+  <div class="modal-box" style="max-width: 480px;">
+    <div class="modal-header">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 1.2rem;">👥</span>
+        <h3>Invite Enterprise Team Member</h3>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-team-invite')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-team-invite" onsubmit="event.preventDefault(); submitTeamInvite();">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label>Full Name</label>
+          <input type="text" class="form-input" id="invite-name" placeholder="e.g. David Zhao" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label>Corporate Work Email</label>
+          <input type="email" class="form-input" id="invite-email" placeholder="d.zhao@company.com" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label>Enterprise RBAC Role</label>
+          <select class="form-select" id="invite-role">
+            <option value="Executive Assistant">Executive Assistant (Review & Drafts)</option>
+            <option value="Security Officer">Security Officer (PromptShield & DLP Policy)</option>
+            <option value="Operations Admin">Operations Admin (Rules & Ingestion)</option>
+            <option value="Compliance Auditor">Compliance Auditor (Read-Only SIEM & Logs)</option>
+            <option value="Enterprise Owner">Enterprise Owner (Full Tenant Root)</option>
+          </select>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-team-invite')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Send Seat Invitation</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 14-DAY ENTERPRISE PILOT -->
+<div class="modal-overlay" id="modal-pilot-request">
+  <div class="modal-box" style="max-width: 500px;">
+    <div class="modal-header">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 1.2rem;">🚀</span>
+        <h3>Book 14-Day Enterprise Pilot</h3>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-pilot-request')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">
+        Launch an isolated enterprise pilot with custom IMAP/SMTP connectivity, dedicated AES-256 vault, and zero data retention BAA.
+      </p>
+      <form id="form-pilot-request" onsubmit="event.preventDefault(); submitPilotRequest();">
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label>Full Name</label>
+          <input type="text" class="form-input" id="pilot-name" placeholder="VP of Operations" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label>Work Email</label>
+          <input type="email" class="form-input" id="pilot-email" placeholder="executive@enterprise.com" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label>Company / Organization</label>
+          <input type="text" class="form-input" id="pilot-company" placeholder="Acme Global Financial" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label>Primary Deployment Requirement</label>
+          <select class="form-select" id="pilot-deployment">
+            <option value="private_cloud">AutoMail Enterprise Cloud (SOC-2 Type II)</option>
+            <option value="vpc">Dedicated AWS / GCP / Azure Private VPC</option>
+            <option value="on_prem">100% On-Premise Air-Gapped Appliance</option>
+          </select>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-pilot-request')">Cancel</button>
+          <button type="submit" class="btn btn-success">Submit Pilot Request</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: INTEGRATION CONNECTOR CONFIG -->
+<div class="modal-overlay" id="modal-integration-config">
+  <div class="modal-box" style="max-width: 520px;">
+    <div class="modal-header">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 1.2rem;" id="int-modal-icon">💬</span>
+        <h3 id="int-modal-title">Configure Connector</h3>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-integration-config')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-integration-config" onsubmit="event.preventDefault(); saveIntegrationModal();">
+        <input type="hidden" id="int-modal-id">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label>Webhook URL / Endpoint</label>
+          <input type="url" class="form-input" id="int-modal-url" placeholder="https://hooks.slack.com/services/..." required>
+        </div>
+        <div class="form-group" style="margin-bottom: 12px;" id="int-modal-channel-group">
+          <label>Destination Channel / Identifier</label>
+          <input type="text" class="form-input" id="int-modal-channel" placeholder="#executive-alerts or OPS">
+        </div>
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label class="checkbox-container" style="font-size: 0.88rem;">
+            <input type="checkbox" id="int-modal-enabled" checked>
+            <span>Enable Connector for Real-Time Dispatch</span>
+          </label>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <button type="button" class="btn btn-outline" onclick="testCurrentIntegrationWebhook()">⚡ Test Webhook</button>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('modal-integration-config')">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Configuration</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- SPOTLIGHT COMMAND PALETTE DIALOG (Ctrl+K / Cmd+K) -->
+<div class="command-palette-backdrop" id="dialog-command-palette" onclick="handlePaletteBackdropClick(event)">
+  <div class="command-palette-box">
+    <div class="palette-input-row">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+      <input type="text" id="palette-search-input" placeholder="Type a command, search emails, jump to view, or query RAG..." autocomplete="off">
+      <span class="palette-esc-badge" onclick="closeCommandPalette()">ESC</span>
+    </div>
+
+    <div class="palette-results-container" id="palette-results-container">
+      <!-- Dynamically filled with search and shortcut actions -->
+    </div>
+
+    <div class="palette-footer">
+      <span><kbd>↑</kbd> <kbd>↓</kbd> Navigate</span>
+      <span><kbd>↵</kbd> Select</span>
+      <span><kbd>ESC</kbd> Close</span>
+      <span style="margin-left: auto; color: var(--accent-emerald);">⚡ Universal Enterprise Command Engine</span>
+    </div>
+  </div>
+</div>
+
+<!-- FLOATING RAG CHATBOT WIDGET (BOTTOM-RIGHT) -->
+<div class="floating-chat-container">
+  <!-- Launcher Button -->
+  <button class="floating-chat-launcher" id="btn-floating-chat" title="Ask AutoMail AI Copilot (RAG)" aria-label="Open AI Copilot Chat">
+    <div class="floating-chat-icon-wrapper">
+      <svg class="icon-chat-bubble" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+      </svg>
+      <svg class="icon-chat-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </div>
+    <span class="floating-chat-pulse" title="AI Copilot Online"></span>
+    <span class="floating-chat-tooltip">Ask AI Copilot</span>
+  </button>
+
+  <!-- Floating Chat Window -->
+  <div class="floating-chat-window" id="floating-chat-window">
+    <div class="chat-header-bar">
+      <div class="chat-header-info">
+        <div class="chat-header-avatar">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+          </svg>
+        </div>
+        <div class="chat-header-text">
+          <div class="chat-header-title-row">
+            <h3 class="chat-header-title">AutoMail AI Helper</h3>
+            <span class="rag-badge">SMART HELPER</span>
+          </div>
+          <div class="chat-header-sub">
+            <span class="status-dot"></span>
+            <span id="chat-active-workspace-text">Online • Ready to Help</span>
+          </div>
+        </div>
+      </div>
+      <div class="chat-header-actions">
+        <button class="chat-icon-btn" id="btn-chat-refresh-suggestions" onclick="loadChatSuggestions()" title="Refresh Suggestions" aria-label="Refresh Suggestions">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        </button>
+        <button class="chat-icon-btn" id="btn-chat-clear" onclick="clearChatHistory()" title="Clear Conversation" aria-label="Clear Conversation">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        </button>
+        <button class="chat-icon-btn close" id="btn-close-floating-chat" onclick="closeFloatingChat()" title="Minimize Chat" aria-label="Minimize Chat">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Quick Context Suggestions Carousel -->
+    <div class="chat-suggestions-wrapper">
+      <div class="chat-suggestions-bar" id="chat-suggestions-container">
+        <!-- Dynamically populated via JS -->
+      </div>
+    </div>
+
+    <!-- Messages Scroll View -->
+    <div class="chat-messages-container" id="chat-messages-container">
+      <!-- Welcome hero card -->
+      <div class="chat-welcome-card" id="chat-welcome-hero">
+        <div class="chat-welcome-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+          </svg>
+        </div>
+        <h4>Hi there! How can I help you today?</h4>
+        <p>I can read your emails, find drafts waiting for your OK, or answer any questions.</p>
+        <div class="chat-starter-grid">
+          <button type="button" class="chat-starter-card" onclick="useSuggestion('What urgent emails need my attention right now?')">
+            <span class="starter-icon">🚨</span>
+            <div class="starter-text">
+              <strong>Urgent Emails</strong>
+              <span>Find urgent messages</span>
+            </div>
+          </button>
+          <button type="button" class="chat-starter-card" onclick="useSuggestion('What drafts are waiting for my OK?')">
+            <span class="starter-icon">⏳</span>
+            <div class="starter-text">
+              <strong>Waiting for OK</strong>
+              <span>Review AI draft replies</span>
+            </div>
+          </button>
+          <button type="button" class="chat-starter-card" onclick="useSuggestion('Give me a quick summary of my unread emails.')">
+            <span class="starter-icon">📬</span>
+            <div class="starter-text">
+              <strong>Unread Summary</strong>
+              <span>Quick overview of inbox</span>
+            </div>
+          </button>
+          <button type="button" class="chat-starter-card" onclick="useSuggestion('What smart rules are active right now?')">
+            <span class="starter-icon">⚡</span>
+            <div class="starter-text">
+              <strong>Active Rules</strong>
+              <span>See automation recipes</span>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat Input Controls -->
+    <div class="chat-input-area">
+      <form id="form-chat-input" onsubmit="event.preventDefault(); submitChatQuery();">
+        <div class="chat-input-box">
+          <input 
+            type="text" 
+            class="chat-input" 
+            id="chat-query-input" 
+            placeholder="Ask anything about your emails..." 
+            autocomplete="off"
+          />
+          <button type="submit" class="chat-send-btn" id="btn-chat-send" title="Send message" aria-label="Send message">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </button>
+        </div>
+      </form>
+      <div class="chat-footer-caption">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+        <span>100% Isolated Private Workspace • PromptShield Active</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+
+<div id="toast-container"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

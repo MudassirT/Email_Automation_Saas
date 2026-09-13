@@ -39,6 +39,36 @@ if os.getenv("VERCEL") or not os.getenv("AUTOMAIL_DATA_DIR"):
 
 # Import the FastAPI application
 from email_service.server import app
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+
+# Vercel Edge Rewrite Handler:
+# Restores the original requested path from x-forwarded-uri or x-matched-path
+# when Vercel rewrites routes to /api/index.py, eliminating 404 "Not Found".
+class VercelPathCorrectionMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        raw_path = request.scope.get("path", "")
+        forwarded = request.headers.get("x-forwarded-uri", "")
+        matched = request.headers.get("x-matched-path", "")
+
+        if raw_path in ("/api/index.py", "/api/index", "/api/index.py/", "/api/index/"):
+            if forwarded:
+                request.scope["path"] = forwarded.split("?")[0]
+            elif matched and not matched.startswith("/api/index.py"):
+                request.scope["path"] = matched.split("?")[0]
+            else:
+                request.scope["path"] = "/"
+        elif raw_path in ("/api", "/api/"):
+            if forwarded and forwarded not in ("/api", "/api/"):
+                request.scope["path"] = forwarded.split("?")[0]
+            elif matched and matched not in ("/api", "/api/"):
+                request.scope["path"] = matched.split("?")[0]
+            else:
+                request.scope["path"] = "/"
+
+        return await call_next(request)
+
+app.add_middleware(VercelPathCorrectionMiddleware)
 
 # Export for Vercel Python runtime
 __all__ = ["app"]

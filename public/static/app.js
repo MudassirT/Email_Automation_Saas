@@ -299,37 +299,37 @@ function switchView(viewName) {
 
   // Update Title
   const titles = {
-    overview: "Overview Dashboard",
-    inbox: "Inbox & Email Threads",
-    approvals: "Approval Queue (Human-in-the-Loop)",
-    rules: "Automation Rules Engine",
-    sent: "Sent History & Outbox",
-    logs: "Live Activity Logs",
-    chat: "AI Copilot & Multi-Tenant RAG Assistant",
-    landing: "Enterprise Showcase & ROI Simulator",
-    compliance: "Security & Compliance Center",
-    integrations: "Enterprise Integrations Hub",
-    team: "Organization & Team Seats",
-    settings: "Configuration & Credentials",
-    admin: "Enterprise Admin Monitoring Console"
+    overview: "🏠 Overview",
+    inbox: "📬 Inbox",
+    approvals: "⏳ Waiting for Your OK",
+    rules: "⚡ Smart AI Rules",
+    sent: "🚀 Sent Emails",
+    logs: "📋 Activity History",
+    chat: "🤖 AI Helper Chat",
+    landing: "💡 Time & Money Saved",
+    compliance: "🛡️ Safety & Privacy",
+    integrations: "🔌 Connected Apps",
+    team: "👥 Team Members",
+    settings: "⚙️ Settings",
+    admin: "🔒 Admin Console"
   };
   const titleEl = document.getElementById("current-view-title");
   if (titleEl) titleEl.textContent = titles[viewName] || "Dashboard";
 
   const breadcrumbs = {
-    overview: "Live Telemetry & Ingestion",
-    inbox: "AI Categorized & Prioritized",
-    approvals: "Human-in-the-Loop Safe Action Dispatch",
-    rules: "Autonomous Filtering & Escalations",
-    sent: "Audit Dispatch Outbox",
-    logs: "Unified Multi-Tenant Telemetry Stream",
-    chat: "Interactive Multi-Tenant RAG AI",
-    landing: "Value Proposition & Enterprise Simulator",
-    compliance: "SOC-2 & Encryption Controls",
-    integrations: "Enterprise API Gateways",
-    team: "Multi-Seat Role Management",
-    settings: "Credentials & Engine Config",
-    admin: "Executive Cross-Tenant Observability"
+    overview: "See how your AI helper is doing today",
+    inbox: "Emails sorted into clear, friendly folders",
+    approvals: "Review drafts before they are sent",
+    rules: "Automatic recipes that save you time",
+    sent: "Emails delivered safely",
+    logs: "Everything your AI helper did step-by-step",
+    chat: "Ask questions or search emails quickly",
+    landing: "See how much time and money you save",
+    compliance: "Your emails and passwords are secure and private",
+    integrations: "Connect with Slack, Teams, and more",
+    team: "People who have access to this space",
+    settings: "Connect your email address and customize AI",
+    admin: "Monitor system health and accounts"
   };
   const crumbEl = document.getElementById("current-view-breadcrumb");
   if (crumbEl) crumbEl.textContent = breadcrumbs[viewName] || "Dashboard";
@@ -605,8 +605,10 @@ async function loadOverview() {
     if (container) {
       if (approvals.length === 0) {
         container.innerHTML = `
-          <div style="padding: 24px; text-align: center; color: var(--text-dim);">
-            <p>✓ All caught up! No pending drafts require your review right now.</p>
+          <div class="friendly-empty-card">
+            <div class="friendly-empty-icon">🎉</div>
+            <div class="friendly-empty-title">All Caught Up!</div>
+            <p class="friendly-empty-desc">No drafts are waiting for your OK. You're completely free to relax!</p>
           </div>
         `;
       } else {
@@ -614,9 +616,9 @@ async function loadOverview() {
           <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px; display: flex; justify-content: space-between; align-items: center;">
             <div style="max-width: 70%;">
               <div style="font-weight: 600; font-size: 0.88rem; color: #fff; margin-bottom: 2px;">${escapeHtml(appr.subject)}</div>
-              <div style="font-size: 0.75rem; color: var(--text-muted);">${escapeHtml(appr.recipient)}</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">To: ${escapeHtml(appr.recipient)}</div>
             </div>
-            <button class="btn btn-primary btn-sm" onclick="switchView('approvals')">Review & Send</button>
+            <button class="btn btn-primary btn-sm" onclick="switchView('approvals')">👀 Review & Say OK</button>
           </div>
         `).join("");
       }
@@ -663,12 +665,12 @@ async function loadInbox() {
     const container = document.getElementById("inbox-items-container");
     if (!container) return;
 
-    if (allEmails.length === 0) {
+    if (!emails || emails.length === 0) {
       container.innerHTML = `
-        <div class="empty-state" style="padding: 36px 20px; text-align: center;">
-          <svg width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="color: var(--accent-primary); margin-bottom: 12px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-          <p style="font-weight: 600; color: var(--text-main); font-size: 0.95rem; margin-bottom: 6px;">Your Mailbox is Empty</p>
-          <p style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.5;">Connect your mailbox in <a href="#" onclick="switchView('settings'); return false;" style="color: var(--accent-primary); font-weight: 600;">Settings</a> and click <strong>Sync Emails</strong> to ingest and triage your messages.</p>
+        <div class="friendly-empty-card" style="margin: 20px;">
+          <div class="friendly-empty-icon">📬</div>
+          <div class="friendly-empty-title">Your Inbox is Clear & Peaceful!</div>
+          <p class="friendly-empty-desc">Connect your email address in <a href="#" onclick="switchView('settings'); return false;" style="color: var(--accent-primary); font-weight: 600;">Settings</a> and click <strong>Check for New Emails</strong> to let your AI sort them into folders.</p>
         </div>
       `;
       return;
@@ -676,9 +678,10 @@ async function loadInbox() {
 
     if (filtered.length === 0) {
       container.innerHTML = `
-        <div class="empty-state">
-          <svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-          <p>No emails match this filter.<br>Try a different category or clear the search.</p>
+        <div class="friendly-empty-card" style="margin: 20px;">
+          <div class="friendly-empty-icon">🔍</div>
+          <div class="friendly-empty-title">No Matching Emails</div>
+          <p class="friendly-empty-desc">Try choosing a different folder or clearing the search box.</p>
         </div>
       `;
       return;
@@ -687,6 +690,7 @@ async function loadInbox() {
     container.innerHTML = filtered.map(item => {
       const isSelected = item.id === selectedEmailId;
       const priorityClass = item.priority === "Urgent" ? "badge-urgent" : item.priority === "High" ? "badge-high" : item.priority === "Medium" ? "badge-medium" : "badge-low";
+      const priorityLabel = item.priority === "Urgent" ? "🚨 Urgent" : item.priority === "High" ? "⚡ High" : item.priority === "Low" ? "💤 Low" : "🟢 Normal";
       return `
         <div class="email-card-item ${isSelected ? 'selected' : ''}" onclick="selectEmail('${item.id}')">
           <div class="email-item-header">
@@ -696,7 +700,7 @@ async function loadInbox() {
           <div class="email-subject">${escapeHtml(item.subject)}</div>
           <div class="email-snippet">${escapeHtml(item.snippet || item.body || '')}</div>
           <div class="email-badges">
-            <span class="badge ${priorityClass}">${escapeHtml(item.priority || 'Normal')}</span>
+            <span class="badge ${priorityClass}">${escapeHtml(priorityLabel)}</span>
             <span class="badge badge-category">${escapeHtml(item.category || 'General')}</span>
           </div>
         </div>
@@ -758,16 +762,16 @@ async function selectEmail(id) {
             </div>
           </div>
           <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-            <span class="badge ${priorityClass}">${escapeHtml(email.priority || 'Normal')}</span>
+            <span class="badge ${priorityClass}">${escapeHtml(email.priority === 'Urgent' ? '🚨 Urgent' : email.priority === 'High' ? '⚡ High' : email.priority === 'Low' ? '💤 Low' : '🟢 Normal')}</span>
             <span class="badge badge-category">${escapeHtml(email.category || 'General')}</span>
-            <span class="badge" style="background: rgba(255,255,255,0.08); color: var(--text-main);">Sentiment: ${escapeHtml(email.sentiment || 'Neutral')}</span>
+            <span class="badge" style="background: rgba(255,255,255,0.08); color: var(--text-main);">${email.sentiment === 'Positive' ? '😊 Happy' : email.sentiment === 'Negative' ? '😟 Needs Care' : '😐 Calm'}</span>
           </div>
         </div>
 
         <!-- IN PLAIN WORDS (COMPRESSED SUMMARY FOR OWNER) -->
         <div class="briefing-owner-callout">
           <div class="callout-title">
-            <span>💬 WHAT THIS EMAIL SAYS (COMPRESSED FOR OWNER)</span>
+            <span>💬 IN SIMPLE WORDS: WHAT SENDER WANTS</span>
             <span class="callout-intent">🎯 Goal: ${escapeHtml(email.core_intent || email.category || 'General')}</span>
           </div>
           <div class="callout-text">
@@ -778,8 +782,8 @@ async function selectEmail(id) {
         <!-- EXTRACTED ACTIONABLE TASKS CHECKLIST -->
         <div class="task-checklist-box">
           <div class="task-checklist-title">
-            <span>📋 Actionable Tasks Extracted by AI (${tasks.length})</span>
-            <span style="font-size: 0.75rem; color: var(--text-dim);">Checked items ready for automated resolution</span>
+            <span>📋 Things to Do (${tasks.length})</span>
+            <span style="font-size: 0.75rem; color: var(--text-dim);">Your AI helper found these tasks in the message</span>
           </div>
           <div class="task-items-list">
             ${tasks.map((t, idx) => `
@@ -794,17 +798,17 @@ async function selectEmail(id) {
         <!-- AI AUTOMATED RESOLUTION & 1-CLICK DISPATCH -->
         <div class="ai-automated-section">
           <div class="ai-pill-row">
-            <span style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600;">AI Executed:</span>
+            <span style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600;">AI Did:</span>
             ${aiActions.map(act => `<span class="ai-pill-tag">✓ ${escapeHtml(act)}</span>`).join('')}
           </div>
           ${draft && draft.status === 'pending' ? `
             <div style="margin-top: 12px; display: flex; gap: 10px; align-items: center; justify-content: space-between; background: rgba(99, 102, 241, 0.08); padding: 12px 16px; border-radius: var(--radius-md); border: 1px dashed var(--border-active); flex-wrap: wrap;">
               <div>
-                <div style="font-weight: 600; font-size: 0.88rem; color: #fff;">🤖 Ready for One-Click AI Task Automation</div>
-                <div style="font-size: 0.76rem; color: var(--text-muted);">AI drafted response addressing all ${tasks.length} task(s).</div>
+                <div style="font-weight: 600; font-size: 0.88rem; color: #fff;">🤖 Ready for One-Click Send</div>
+                <div style="font-size: 0.76rem; color: var(--text-muted);">AI drafted a polite response answering all ${tasks.length} item(s).</div>
               </div>
               <button class="btn btn-primary btn-ai-execute" onclick="approveDraft('${draft.id}')">
-                <span>🚀 Execute Tasks & Send AI Reply</span>
+                <span>🚀 Looks Good, Send It Now!</span>
               </button>
             </div>
           ` : ''}
@@ -827,14 +831,14 @@ async function selectEmail(id) {
       ${draft ? `
         <div style="margin-top: 24px; background: rgba(99, 102, 241, 0.08); border: 1px solid var(--border-active); border-radius: var(--radius-md); padding: 18px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <span style="font-weight: 600; font-size: 0.9rem; color: #fff;">✨ AI Generated Draft (${escapeHtml(draft.tone || 'Professional')})</span>
-            <span class="badge ${draft.status === 'sent' ? 'badge-success' : 'badge-high'}">${escapeHtml(draft.status.toUpperCase())}</span>
+            <span style="font-weight: 600; font-size: 0.9rem; color: #fff;">✨ AI Draft Reply (${escapeHtml(draft.tone || 'Friendly')})</span>
+            <span class="badge ${draft.status === 'sent' ? 'badge-success' : 'badge-high'}">${escapeHtml(draft.status === 'sent' ? 'SENT' : 'WAITING FOR YOUR OK')}</span>
           </div>
           <div style="font-size: 0.85rem; color: #cbd5e1; white-space: pre-wrap; line-height: 1.6; margin-bottom: 14px;">${escapeHtml(draft.body)}</div>
           ${draft.status === 'pending' ? `
             <div style="display: flex; gap: 10px;">
-              <button class="btn btn-success btn-sm" onclick="approveDraft('${draft.id}')">✓ Approve & Send Now</button>
-              <button class="btn btn-secondary btn-sm" onclick="switchView('approvals')">Open in Approval Queue</button>
+              <button class="btn btn-success btn-sm" onclick="approveDraft('${draft.id}')">✅ Looks Good, Send It!</button>
+              <button class="btn btn-secondary btn-sm" onclick="switchView('approvals')">👀 Review in Waiting Queue</button>
             </div>
           ` : ''}
         </div>
@@ -866,10 +870,10 @@ async function loadApprovals() {
 
     if (drafts.length === 0) {
       container.innerHTML = `
-        <div class="empty-state">
-          <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          <p style="color: var(--accent-emerald); font-weight: 600;">Approval Queue is Clear! 🎉</p>
-          <p>All AI drafts reviewed. New replies will appear here for one-click sign-off.</p>
+        <div class="friendly-empty-card">
+          <div class="friendly-empty-icon">🎉</div>
+          <div class="friendly-empty-title">All Caught Up! No Emails Waiting for Your OK</div>
+          <p class="friendly-empty-desc">Whenever your AI helper writes a new draft reply, it will appear here so you can check it and say "Looks good!" before it sends.</p>
         </div>
       `;
       return;
@@ -888,19 +892,19 @@ async function loadApprovals() {
             <div class="approval-info">
               <h3>${escapeHtml(draft.subject)}</h3>
               <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 4px;">
-                Recipient: <strong style="color: #fff;">${escapeHtml(draft.recipient)}</strong> • 🏢 ${escapeHtml(senderOrg)}
+                To: <strong style="color: #fff;">${escapeHtml(draft.recipient)}</strong> • 🏢 ${escapeHtml(senderOrg)}
               </div>
             </div>
             <div style="display: flex; gap: 8px; align-items: center;">
-              <span class="badge badge-urgent">Needs Sign-off</span>
+              <span class="badge badge-urgent">⏳ Needs Your OK</span>
             </div>
           </div>
 
           <!-- Owner Quick Briefing Callout -->
           <div class="briefing-owner-callout" style="margin: 0 0 16px 0;">
             <div class="callout-title">
-              <span>💬 IN PLAIN WORDS (WHAT ${escapeHtml(senderName.toUpperCase())} WANTS):</span>
-              <span class="callout-intent">Goal: ${escapeHtml(orig.core_intent || orig.category || 'General')}</span>
+              <span>💬 IN SIMPLE WORDS (WHAT ${escapeHtml(senderName.toUpperCase())} IS ASKING FOR):</span>
+              <span class="callout-intent">🎯 Goal: ${escapeHtml(orig.core_intent || orig.category || 'General')}</span>
             </div>
             <div class="callout-text" style="font-size: 0.9rem;">
               "${escapeHtml(compressed)}"
@@ -914,7 +918,7 @@ async function loadApprovals() {
             <!-- Original Email Column -->
             <div class="col-original">
               <div class="col-label">
-                <span>Incoming Email</span>
+                <span>📩 Incoming Message</span>
                 <span class="badge badge-category">${escapeHtml(orig.category || 'Inquiry')}</span>
               </div>
               <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; white-space: pre-wrap; max-height: 220px; overflow-y: auto;">
@@ -925,8 +929,8 @@ async function loadApprovals() {
             <!-- Proposed AI Reply Column -->
             <div class="col-reply">
               <div class="col-label">
-                <span>AI Proposed Response (Editable)</span>
-                <span style="color: var(--accent-secondary); font-size: 0.72rem;">✨ Addressed ${tasks.length} task(s)</span>
+                <span>✍️ AI Draft Reply (You can edit anything)</span>
+                <span style="color: var(--accent-secondary); font-size: 0.72rem;">✨ Handled ${tasks.length} item(s)</span>
               </div>
               <textarea class="draft-textarea" id="draft-text-${draft.id}">${escapeHtml(draft.body)}</textarea>
             </div>
@@ -935,21 +939,21 @@ async function loadApprovals() {
           <!-- Bottom Action Bar -->
           <div class="approval-actions">
             <div class="tone-selector">
-              <span>Regenerate Tone:</span>
+              <span>Tone of Voice:</span>
               <select class="tone-select" id="tone-select-${draft.id}">
-                <option value="Professional" ${draft.tone === 'Professional' ? 'selected' : ''}>Professional</option>
-                <option value="Friendly" ${draft.tone === 'Friendly' ? 'selected' : ''}>Friendly</option>
-                <option value="Direct" ${draft.tone === 'Direct' ? 'selected' : ''}>Direct & Concise</option>
-                <option value="Executive" ${draft.tone === 'Executive' ? 'selected' : ''}>Executive</option>
+                <option value="Friendly" ${draft.tone === 'Friendly' ? 'selected' : ''}>😊 Friendly</option>
+                <option value="Professional" ${draft.tone === 'Professional' ? 'selected' : ''}>👔 Professional</option>
+                <option value="Direct" ${draft.tone === 'Direct' ? 'selected' : ''}>⚡ Quick & Short</option>
+                <option value="Executive" ${draft.tone === 'Executive' ? 'selected' : ''}>💼 Formal</option>
               </select>
-              <button class="btn btn-secondary btn-sm" onclick="regenerateDraft('${draft.id}')">✨ Regenerate</button>
+              <button class="btn btn-secondary btn-sm" onclick="regenerateDraft('${draft.id}')">✨ Rewrite with AI</button>
             </div>
 
             <div style="display: flex; gap: 10px;">
-              <button class="btn btn-danger btn-sm" onclick="rejectDraft('${draft.id}')">Dismiss / Reject</button>
+              <button class="btn btn-danger btn-sm" onclick="rejectDraft('${draft.id}')">❌ Don't Send</button>
               <button class="btn btn-success" onclick="approveDraft('${draft.id}')">
                 <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                <span>Approve & Send Email</span>
+                <span>✅ Looks Good, Send It!</span>
               </button>
             </div>
           </div>
@@ -1037,6 +1041,17 @@ async function loadRules() {
     const rules = await res.json();
     const container = document.getElementById("rules-grid-container");
     if (!container) return;
+
+    if (!rules || rules.length === 0) {
+      container.innerHTML = `
+        <div class="friendly-empty-card" style="grid-column: 1 / -1; margin: 20px 0;">
+          <div class="friendly-empty-icon">⚡</div>
+          <div class="friendly-empty-title">No Rules Yet</div>
+          <p class="friendly-empty-desc">Create your first automatic recipe! Click "+ Add New Rule" above to have your AI helper automatically sort or draft replies.</p>
+        </div>
+      `;
+      return;
+    }
 
     container.innerHTML = rules.map(rule => `
       <div class="rule-card">
@@ -1144,7 +1159,7 @@ async function loadSent() {
     if (!tbody) return;
 
     if (sentList.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-dim); padding: 30px;">No sent emails recorded yet.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-dim); padding: 36px;"><div class="friendly-empty-card" style="margin: 0; border: none;"><div class="friendly-empty-icon">🚀</div><div class="friendly-empty-title">No Sent Emails Yet</div><p class="friendly-empty-desc">When you click "Looks Good, Send It!" on an AI draft, it will be delivered safely and listed right here.</p></div></td></tr>`;
       return;
     }
 
@@ -2438,32 +2453,32 @@ function clearChatHistory() {
         <h4>Conversation Reset</h4>
         <p>Connected to <code>${escapeHtml(activeId)}</code> workspace. Ready to answer questions about your mailbox.</p>
         <div class="chat-starter-grid">
-          <button type="button" class="chat-starter-card" onclick="useSuggestion('What urgent issues require my immediate attention?')">
+          <button type="button" class="chat-starter-card" onclick="useSuggestion('What urgent emails need my attention right now?')">
+            <span class="starter-icon">🚨</span>
+            <div class="starter-text">
+              <strong>Urgent Emails</strong>
+              <span>Find urgent messages</span>
+            </div>
+          </button>
+          <button type="button" class="chat-starter-card" onclick="useSuggestion('What drafts are waiting for my OK?')">
+            <span class="starter-icon">⏳</span>
+            <div class="starter-text">
+              <strong>Waiting for OK</strong>
+              <span>Review AI draft replies</span>
+            </div>
+          </button>
+          <button type="button" class="chat-starter-card" onclick="useSuggestion('Give me a quick summary of my unread emails.')">
+            <span class="starter-icon">📬</span>
+            <div class="starter-text">
+              <strong>Unread Summary</strong>
+              <span>Quick overview of inbox</span>
+            </div>
+          </button>
+          <button type="button" class="chat-starter-card" onclick="useSuggestion('What smart rules are active right now?')">
             <span class="starter-icon">⚡</span>
             <div class="starter-text">
-              <strong>Urgent Priorities</strong>
-              <span>Check critical escalations</span>
-            </div>
-          </button>
-          <button type="button" class="chat-starter-card" onclick="useSuggestion('Summarize all draft replies waiting for my approval.')">
-            <span class="starter-icon">📝</span>
-            <div class="starter-text">
-              <strong>Pending Approvals</strong>
-              <span>Review AI draft responses</span>
-            </div>
-          </button>
-          <button type="button" class="chat-starter-card" onclick="useSuggestion('Give me an executive briefing of my unread emails.')">
-            <span class="starter-icon">📊</span>
-            <div class="starter-text">
-              <strong>Executive Briefing</strong>
-              <span>Summarize unread inbox</span>
-            </div>
-          </button>
-          <button type="button" class="chat-starter-card" onclick="useSuggestion('What automation rules are currently protecting my mailbox?')">
-            <span class="starter-icon">🛡️</span>
-            <div class="starter-text">
-              <strong>Security & Rules</strong>
-              <span>Review PromptShield status</span>
+              <strong>Active Rules</strong>
+              <span>See automation recipes</span>
             </div>
           </button>
         </div>

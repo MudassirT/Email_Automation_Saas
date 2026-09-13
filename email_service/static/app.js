@@ -138,6 +138,7 @@ function switchView(viewName) {
     rules: "Automation Rules Engine",
     sent: "Sent History & Outbox",
     logs: "Live Activity Logs",
+    chat: "AI Copilot & Multi-Tenant RAG Assistant",
     settings: "Configuration & Credentials",
     admin: "Enterprise Admin Monitoring Console"
   };
@@ -150,6 +151,7 @@ function switchView(viewName) {
   if (viewName === "rules") loadRules();
   if (viewName === "sent") loadSent();
   if (viewName === "logs") loadLogs();
+  if (viewName === "chat") loadChatView();
   if (viewName === "settings") loadSettings();
   if (viewName === "admin") loadAdminView();
 }
@@ -312,6 +314,7 @@ async function loadAllData(showToasts = true) {
   else if (currentView === "rules") loadRules();
   else if (currentView === "sent") loadSent();
   else if (currentView === "logs") loadLogs();
+  else if (currentView === "chat") loadChatView(false);
   else if (currentView === "admin") loadAdminView();
 }
 
@@ -1675,6 +1678,11 @@ function updateUserProfileUI(authData) {
     currentBadge.textContent = `User: ${activeId}`;
   }
 
+  const chatWsText = document.getElementById("chat-active-workspace-text");
+  if (chatWsText) {
+    chatWsText.textContent = `Indexing Active Workspace: ${activeId} (${role === 'admin' ? 'Admin' : 'User'})`;
+  }
+
   // RBAC: Show or Hide Admin Nav Item
   const adminNav = document.getElementById("nav-admin");
   if (adminNav) {
@@ -1865,4 +1873,263 @@ async function handleSignOutOrOpen() {
   } else {
     openAuthModal("login");
   }
+}
+
+// ==========================================================================
+// 10. AI COPILOT & MULTI-TENANT RAG CHATBOT CONTROLLER
+// ==========================================================================
+
+let _chatHistory = [];
+let _isChatSending = false;
+
+async function loadChatView(refreshSuggestions = true) {
+  const activeId = localStorage.getItem("automail_user_id") || "default";
+  const chatWsText = document.getElementById("chat-active-workspace-text");
+  if (chatWsText) {
+    chatWsText.textContent = `Indexing Active Workspace: ${activeId} • Private Knowledge Base`;
+  }
+  if (refreshSuggestions) {
+    await loadChatSuggestions();
+  }
+}
+
+async function loadChatSuggestions() {
+  const container = document.getElementById("chat-suggestions-container");
+  if (!container) return;
+
+  try {
+    const res = await fetch("/api/chat/suggestions");
+    if (!res.ok) return;
+    const data = await res.json();
+    const suggestions = data.suggestions || [];
+
+    container.innerHTML = `
+      <span style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; font-weight: 600; padding: 4px 6px;">Suggested:</span>
+      ${suggestions.map(s => `
+        <button type="button" class="chat-suggestion-chip" onclick="useSuggestion('${escapeHtml(s).replace(/'/g, "\\'")}')">
+          ⚡ ${escapeHtml(s)}
+        </button>
+      `).join("")}
+    `;
+  } catch (e) {
+    console.error("Error loading chat suggestions:", e);
+  }
+}
+
+function useSuggestion(text) {
+  const input = document.getElementById("chat-query-input");
+  if (input) {
+    input.value = text;
+    input.focus();
+    submitChatQuery();
+  }
+}
+
+async function submitChatQuery() {
+  if (_isChatSending) return;
+  const input = document.getElementById("chat-query-input");
+  const query = input?.value.trim();
+  if (!query) return;
+
+  // Clear input
+  input.value = "";
+  _isChatSending = true;
+
+  const btnSend = document.getElementById("btn-chat-send");
+  if (btnSend) btnSend.disabled = true;
+
+  // 1. Append User Message to UI
+  appendChatMessage("user", query);
+
+  // 2. Append Typing Indicator
+  const typingId = appendChatTypingIndicator();
+
+  try {
+    const res = await fetch("/api/chat/query", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        query: query,
+        conversation_history: _chatHistory.slice(-6)
+      })
+    });
+
+    removeChatTypingIndicator(typingId);
+
+    if (!res.ok) {
+      const err = await res.json();
+      appendChatMessage("ai", `**Error**: ${err.detail || 'Unable to process query.'}`);
+      return;
+    }
+
+    const data = await res.json();
+    const answer = data.answer || "No response generated.";
+    const sources = data.sources || [];
+    const actions = data.suggested_actions || [];
+
+    // Store in session history
+    _chatHistory.push({ role: "user", content: query });
+    _chatHistory.push({ role: "assistant", content: answer });
+
+    // 3. Append AI Response to UI
+    appendChatMessage("ai", answer, sources, actions, data.engine);
+
+  } catch (e) {
+    removeChatTypingIndicator(typingId);
+    appendChatMessage("ai", `**Network Error**: ${e.message}`);
+  } finally {
+    _isChatSending = false;
+    if (btnSend) btnSend.disabled = false;
+    input?.focus();
+  }
+}
+
+function appendChatMessage(role, text, sources = [], actions = [], engine = "") {
+  const container = document.getElementById("chat-messages-container");
+  if (!container) return;
+
+  const isUser = role === "user";
+  const row = document.createElement("div");
+  row.className = `chat-message-row ${isUser ? 'user' : 'ai'}`;
+
+  // Markdown parsing for bullet points, bold, headings
+  const formattedHtml = formatChatMarkdown(text);
+
+  // Source citation chips
+  let sourcesHtml = "";
+  if (sources && sources.length > 0) {
+    sourcesHtml = `
+      <div class="chat-sources-container">
+        <span style="font-size: 0.7rem; color: var(--text-dim); margin-right: 4px;">Sources (${sources.length}):</span>
+        ${sources.map(s => {
+          const typeIcon = s.type === "email" ? "✉️" : s.type === "draft" ? "📝" : s.type === "rule" ? "⚙️" : "🛡️";
+          return `
+            <span class="source-citation-chip" onclick="handleSourceClick('${escapeHtml(s.type)}', '${escapeHtml(s.metadata?.email_id || s.metadata?.draft_id || '')}')" title="${escapeHtml(s.snippet)}">
+              <span>${typeIcon}</span>
+              <span>${escapeHtml(s.title || s.id)}</span>
+            </span>
+          `;
+        }).join("")}
+      </div>
+    `;
+  }
+
+  // Suggested quick action buttons
+  let actionsHtml = "";
+  if (actions && actions.length > 0) {
+    actionsHtml = `
+      <div class="chat-actions-container">
+        ${actions.map(a => `
+          <button type="button" class="chat-action-btn" onclick="useSuggestion('${escapeHtml(a).replace(/'/g, "\\'")}')">
+            ✓ ${escapeHtml(a)}
+          </button>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  row.innerHTML = `
+    <div class="chat-avatar-circle">${isUser ? '👤' : '🤖'}</div>
+    <div class="chat-bubble-wrapper">
+      <div class="chat-bubble ${isUser ? 'user' : 'ai'}">
+        ${!isUser ? `<div class="chat-bubble-author">AutoMail AI Copilot ${engine ? `<span style="font-weight: 400; text-transform: none; color: var(--text-dim); font-size: 0.65rem;">(${escapeHtml(engine)})</span>` : ''}</div>` : ''}
+        ${formattedHtml}
+      </div>
+      ${sourcesHtml}
+      ${actionsHtml}
+    </div>
+  `;
+
+  container.appendChild(row);
+  container.scrollTop = container.scrollHeight;
+}
+
+function appendChatTypingIndicator() {
+  const container = document.getElementById("chat-messages-container");
+  if (!container) return null;
+
+  const id = `typing-${Date.now()}`;
+  const row = document.createElement("div");
+  row.id = id;
+  row.className = "chat-message-row ai";
+  row.innerHTML = `
+    <div class="chat-avatar-circle">🤖</div>
+    <div class="chat-bubble-wrapper">
+      <div class="chat-bubble ai">
+        <div class="chat-typing-dots">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+    </div>
+  `;
+  container.appendChild(row);
+  container.scrollTop = container.scrollHeight;
+  return id;
+}
+
+function removeChatTypingIndicator(id) {
+  if (!id) return;
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+function clearChatHistory() {
+  _chatHistory = [];
+  const container = document.getElementById("chat-messages-container");
+  if (container) {
+    const activeId = localStorage.getItem("automail_user_id") || "default";
+    container.innerHTML = `
+      <div class="chat-message-row ai">
+        <div class="chat-avatar-circle">🤖</div>
+        <div class="chat-bubble-wrapper">
+          <div class="chat-bubble ai">
+            <div class="chat-bubble-author">AutoMail AI Copilot</div>
+            <p>Conversation reset. I am connected to your private workspace (<code>${escapeHtml(activeId)}</code>). How can I assist you?</p>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  showToast("Chat stream cleared", "info");
+}
+
+function handleSourceClick(type, targetId) {
+  if (type === "email") {
+    switchView("inbox");
+    if (targetId) {
+      setTimeout(() => selectEmail(targetId), 200);
+    }
+  } else if (type === "draft") {
+    switchView("approvals");
+  } else if (type === "rule") {
+    switchView("rules");
+  } else if (type === "domain_knowledge" || type === "system_config") {
+    switchView("settings");
+  }
+}
+
+function formatChatMarkdown(text) {
+  if (!text) return "";
+  let html = escapeHtml(text);
+
+  // Bold
+  html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  // Italic
+  html = html.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+  // Inline Code
+  html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+  // Headers (### Header)
+  html = html.replace(/^### (.*$)/gim, "<h4>$1</h4>");
+  html = html.replace(/^## (.*$)/gim, "<h3>$1</h3>");
+  // List items (* item or - item)
+  html = html.replace(/^\s*[\-\*] (.*$)/gim, "<li>$1</li>");
+  // Wrap consecutive list items in <ul>
+  html = html.replace(/(<li>.*<\/li>)/gms, "<ul>$1</ul>");
+  // Replace multiple </ul><ul>
+  html = html.replace(/<\/ul>\s*<ul>/g, "");
+  // Paragraphs
+  html = html.replace(/\n\n/g, "<br><br>");
+  html = html.replace(/\n/g, "<br>");
+
+  return html;
 }

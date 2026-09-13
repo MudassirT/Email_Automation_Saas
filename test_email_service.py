@@ -326,6 +326,88 @@ def test_all():
     assert "total_tenants" in admin_overview_res.json()
     print("Admin Route RBAC (Admin Authorized 200): OK!")
 
+    # 11. MULTI-TENANT RAG CHATBOT & DOMAIN KNOWLEDGE VERIFICATION
+    print("\n--- 11. Testing Multi-Tenant RAG Chatbot & Domain Knowledge ---")
+    from email_service.rag_engine import UserKnowledgeIndex, HybridRetriever, rag_chatbot
+
+    # A. Indexing & Domain Knowledge Chunks
+    rag_user_a = f"rag_user_a_{secrets.token_hex(4)}"
+    rag_user_b = f"rag_user_b_{secrets.token_hex(4)}"
+
+    # Seed User A with a secret project email
+    storage.for_user(rag_user_a).add_email({
+        "from": "cfo@enterprise.com",
+        "subject": "Project Quantum Secret Valuation Analysis",
+        "body": "The valuation of Project Quantum is finalized at $50M. Please keep this confidential.",
+        "category": "Billing/Invoice",
+        "priority": "Urgent",
+        "compressed_summary": "CFO confirmed Project Quantum valuation at $50M.",
+        "tasks": ["Review confidential $50M valuation"]
+    })
+
+    # Index User A
+    index_a = UserKnowledgeIndex(user_id=rag_user_a)
+    assert len(index_a.chunks) >= 6  # 1 email + 1 config + 6 domain knowledge chunks
+    types_a = [c.doc_type for c in index_a.chunks]
+    assert "email" in types_a
+    assert "domain_knowledge" in types_a
+    assert "system_config" in types_a
+    print("RAG Index Construction & Chunking: OK!")
+
+    # B. Hybrid Retrieval Precision
+    results = HybridRetriever.retrieve("Quantum valuation", index_a, top_k=3)
+    assert len(results) >= 1
+    top_chunk, score = results[0]
+    assert "Project Quantum" in top_chunk.title
+    assert top_chunk.doc_type == "email"
+    print("Hybrid BM25 + Semantic Retrieval Precision: OK!")
+
+    # C. Strict Per-User RAG Segregation (Zero Data Leakage)
+    # Query User A via rag_chatbot
+    response_a = rag_chatbot.answer_query("What is the valuation of Project Quantum?", user_id=rag_user_a)
+    assert "$50M" in response_a["answer"] or "Project Quantum" in response_a["answer"]
+    assert len(response_a["sources"]) >= 1
+    assert any("Project Quantum" in s["title"] for s in response_a["sources"])
+    print("User A RAG Query Success (Found private email): OK!")
+
+    # Query User B with same question -> MUST NOT find Project Quantum
+    response_b = rag_chatbot.answer_query("What is the valuation of Project Quantum?", user_id=rag_user_b)
+    assert not any("Project Quantum" in s.get("title", "") for s in response_b.get("sources", []))
+    assert "$50M" not in response_b["answer"]
+    print("RAG Multi-Tenant Zero Leakage Verified: User B cannot retrieve User A's private email!")
+
+    # D. Domain Knowledge Answering
+    kb_res = rag_chatbot.answer_query("How does AutoMail AI protect against prompt injection?", user_id=rag_user_a)
+    assert "PromptShield" in kb_res["answer"] or "security" in kb_res["answer"].lower()
+    assert len(kb_res["sources"]) >= 1
+    print("RAG Domain Knowledge Query (PromptShield & Security): OK!")
+
+    # E. Contextual Suggestions
+    suggestions_data = rag_chatbot.get_dynamic_suggestions(user_id=rag_user_a)
+    assert isinstance(suggestions_data, list)
+    assert len(suggestions_data) >= 1
+    print(f"RAG Contextual Dynamic Suggestions: OK ({len(suggestions_data)} suggestions generated)")
+
+    # F. FastAPI Chat Endpoints via TestClient
+    client = TestClient(app, headers={"X-Requested-With": "AutoMail", "Origin": "http://localhost:8000"})
+    chat_api_res = client.post(
+        "/api/chat/query",
+        json={"query": "Tell me about my emails and tasks"},
+        headers={"X-User-Id": rag_user_a}
+    )
+    assert chat_api_res.status_code == 200
+    chat_json = chat_api_res.json()
+    assert "answer" in chat_json
+    assert "sources" in chat_json
+    assert "suggested_actions" in chat_json
+    assert chat_json["user_id"] == rag_user_a
+    print("FastAPI /api/chat/query Endpoint (Isolated per-tenant): OK!")
+
+    sugg_api_res = client.get("/api/chat/suggestions", headers={"X-User-Id": rag_user_a})
+    assert sugg_api_res.status_code == 200
+    assert "suggestions" in sugg_api_res.json()
+    print("FastAPI /api/chat/suggestions Endpoint: OK!")
+
     print("\n===========================================")
     print("ALL AUTOMATED VERIFICATION TESTS PASSED! [OK]")
     print("===========================================")

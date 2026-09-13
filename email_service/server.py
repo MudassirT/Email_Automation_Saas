@@ -28,6 +28,7 @@ from .email_engine import email_engine
 from .ai_engine import ai_engine
 from .security import vault, dispatch_limiter, api_rate_limiter, tenant_security
 from .auth import user_manager, google_oauth, create_jwt_token, decode_jwt_token
+from .rag_engine import rag_chatbot
 
 BASE_DIR = Path(__file__).parent
 STATIC_DIR = BASE_DIR / "static"
@@ -218,6 +219,11 @@ class LoginPayload(BaseModel):
 class GoogleDemoPayload(BaseModel):
     email: Optional[str] = "demo.google.user@gmail.com"
     name: Optional[str] = "Google Demo Account"
+
+class ChatQueryPayload(BaseModel):
+    query: str
+    filter_type: Optional[str] = None
+    conversation_history: Optional[List[Dict[str, str]]] = []
 
 
 # --- FRONTEND ROUTE ---
@@ -665,6 +671,42 @@ def test_connection(user_id: str = Depends(get_current_user_id)):
 def test_ai(user_id: str = Depends(get_current_user_id)):
     success, msg = ai_engine.test_ai_connection(user_id=user_id)
     return {"success": success, "message": msg}
+
+
+# --- RAG CHATBOT ENDPOINTS ---
+@app.post("/api/chat/query")
+def chat_query(payload: ChatQueryPayload, user_id: str = Depends(get_current_user_id)):
+    """Query the RAG Chatbot using the active authenticated user's isolated workspace."""
+    return rag_chatbot.answer_query(
+        query=payload.query,
+        user_id=user_id,
+        conversation_history=payload.conversation_history or [],
+        filter_type=payload.filter_type
+    )
+
+
+@app.get("/api/chat/suggestions")
+def chat_suggestions(user_id: str = Depends(get_current_user_id)):
+    """Retrieve dynamic contextual prompt suggestions for active user's mailbox."""
+    return {
+        "user_id": user_id,
+        "suggestions": rag_chatbot.get_dynamic_suggestions(user_id=user_id)
+    }
+
+
+@app.get("/api/chat/history")
+def chat_history(user_id: str = Depends(get_current_user_id)):
+    """Retrieve recent RAG query logs for active user."""
+    user_storage = storage.for_user(user_id)
+    logs = user_storage.get_logs(limit=25)
+    chat_logs = [l for l in logs if l.get("category") == "RAG"]
+    return chat_logs
+
+
+@app.post("/api/chat/clear")
+def chat_clear(user_id: str = Depends(get_current_user_id)):
+    """Clear active user's chat session."""
+    return {"success": True, "message": "Chat session cleared.", "user_id": user_id}
 
 
 def run():

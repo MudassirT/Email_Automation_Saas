@@ -2171,7 +2171,7 @@ async function loadChatView(refreshSuggestions = true) {
   const activeId = localStorage.getItem("automail_user_id") || "default";
   const chatWsText = document.getElementById("chat-active-workspace-text");
   if (chatWsText) {
-    chatWsText.textContent = `Indexing Active Workspace: ${activeId} • Private Knowledge Base`;
+    chatWsText.textContent = `Online • ${activeId === 'default' ? 'Enterprise' : activeId} Workspace`;
   }
   if (refreshSuggestions) {
     await loadChatSuggestions();
@@ -2187,15 +2187,51 @@ async function loadChatSuggestions() {
     if (!res.ok) return;
     const data = await res.json();
     const suggestions = data.suggestions || [];
+    if (!suggestions.length) {
+      if (container.parentElement) container.parentElement.style.display = "none";
+      return;
+    }
+    if (container.parentElement) container.parentElement.style.display = "block";
 
-    container.innerHTML = `
-      <span style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; font-weight: 600; padding: 4px 6px;">Suggested:</span>
-      ${suggestions.map(s => `
-        <button type="button" class="chat-suggestion-chip" onclick="useSuggestion('${escapeHtml(s).replace(/'/g, "\\'")}')">
-          ⚡ ${escapeHtml(s)}
+    container.innerHTML = suggestions.map(s => {
+      let icon = "⚡";
+      let short = s;
+      const lower = s.toLowerCase();
+      if (lower.includes("urgent")) {
+        icon = "⚡";
+        const m = s.match(/\((\d+)\s*urgent\)/i);
+        short = m ? `Urgent Issues (${m[1]})` : "Urgent Priorities";
+      } else if (lower.includes("draft") || lower.includes("approval")) {
+        icon = "📝";
+        const m = s.match(/(\d+)\s*draft/i);
+        short = m ? `Pending Drafts (${m[1]})` : "Pending Approvals";
+      } else if (lower.includes("unread") || lower.includes("briefing")) {
+        icon = "📊";
+        const m = s.match(/(\d+)\s*unread/i);
+        short = m ? `Unread Briefing (${m[1]})` : "Mailbox Briefing";
+      } else if (lower.includes("communications with")) {
+        icon = "💬";
+        const parts = s.split("with ");
+        const who = parts[1] ? parts[1].replace("?", "").trim() : "Contact";
+        short = `Thread: ${who}`;
+      } else if (lower.includes("rule") || lower.includes("protecting")) {
+        icon = "⚙️";
+        short = "Automation Rules";
+      } else if (lower.includes("gmail") || lower.includes("password")) {
+        icon = "🔑";
+        short = "Gmail Setup";
+      } else if (lower.includes("prompt injection") || lower.includes("defense")) {
+        icon = "🛡️";
+        short = "PromptShield Status";
+      }
+
+      return `
+        <button type="button" class="chat-suggestion-chip" onclick="useSuggestion('${escapeHtml(s).replace(/'/g, "\\'")}')" title="${escapeHtml(s)}">
+          <span class="chip-icon">${icon}</span>
+          <span class="chip-label">${escapeHtml(short)}</span>
         </button>
-      `).join("")}
-    `;
+      `;
+    }).join("");
   } catch (e) {
     console.error("Error loading chat suggestions:", e);
   }
@@ -2273,6 +2309,12 @@ function appendChatMessage(role, text, sources = [], actions = [], engine = "") 
   const container = document.getElementById("chat-messages-container");
   if (!container) return;
 
+  // If initial welcome card is showing, remove it for clean conversation flow
+  const welcomeHero = document.getElementById("chat-welcome-hero");
+  if (welcomeHero) {
+    welcomeHero.remove();
+  }
+
   const isUser = role === "user";
   const row = document.createElement("div");
   row.className = `chat-message-row ${isUser ? 'user' : 'ai'}`;
@@ -2285,7 +2327,7 @@ function appendChatMessage(role, text, sources = [], actions = [], engine = "") 
   if (sources && sources.length > 0) {
     sourcesHtml = `
       <div class="chat-sources-container">
-        <span style="font-size: 0.7rem; color: var(--text-dim); margin-right: 4px;">Sources (${sources.length}):</span>
+        <span style="font-size: 0.68rem; color: var(--text-dim); margin-right: 2px;">Sources (${sources.length}):</span>
         ${sources.map(s => {
           const typeIcon = s.type === "email" ? "✉️" : s.type === "draft" ? "📝" : s.type === "rule" ? "⚙️" : "🛡️";
           return `
@@ -2313,11 +2355,19 @@ function appendChatMessage(role, text, sources = [], actions = [], engine = "") 
     `;
   }
 
+  const userAvatar = `<div class="chat-avatar-circle user" style="background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff;">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+  </div>`;
+
+  const aiAvatar = `<div class="chat-avatar-circle ai" style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff;">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
+  </div>`;
+
   row.innerHTML = `
-    <div class="chat-avatar-circle">${isUser ? '👤' : '🤖'}</div>
+    ${isUser ? userAvatar : aiAvatar}
     <div class="chat-bubble-wrapper">
       <div class="chat-bubble ${isUser ? 'user' : 'ai'}">
-        ${!isUser ? `<div class="chat-bubble-author">AutoMail AI Copilot ${engine ? `<span style="font-weight: 400; text-transform: none; color: var(--text-dim); font-size: 0.65rem;">(${escapeHtml(engine)})</span>` : ''}</div>` : ''}
+        ${!isUser ? `<div class="chat-bubble-author">AutoMail AI Copilot ${engine ? `<span style="font-weight: 500; text-transform: none; color: var(--text-dim); font-size: 0.65rem;">(${escapeHtml(engine)})</span>` : ''}</div>` : ''}
         ${formattedHtml}
       </div>
       ${sourcesHtml}
@@ -2338,7 +2388,9 @@ function appendChatTypingIndicator() {
   row.id = id;
   row.className = "chat-message-row ai";
   row.innerHTML = `
-    <div class="chat-avatar-circle">🤖</div>
+    <div class="chat-avatar-circle ai" style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
+    </div>
     <div class="chat-bubble-wrapper">
       <div class="chat-bubble ai">
         <div class="chat-typing-dots">
@@ -2364,13 +2416,43 @@ function clearChatHistory() {
   if (container) {
     const activeId = localStorage.getItem("automail_user_id") || "default";
     container.innerHTML = `
-      <div class="chat-message-row ai">
-        <div class="chat-avatar-circle">🤖</div>
-        <div class="chat-bubble-wrapper">
-          <div class="chat-bubble ai">
-            <div class="chat-bubble-author">AutoMail AI Copilot</div>
-            <p>Conversation reset. I am connected to your private workspace (<code>${escapeHtml(activeId)}</code>). How can I assist you?</p>
-          </div>
+      <div class="chat-welcome-card" id="chat-welcome-hero">
+        <div class="chat-welcome-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+          </svg>
+        </div>
+        <h4>Conversation Reset</h4>
+        <p>Connected to <code>${escapeHtml(activeId)}</code> workspace. Ready to answer questions about your mailbox.</p>
+        <div class="chat-starter-grid">
+          <button type="button" class="chat-starter-card" onclick="useSuggestion('What urgent issues require my immediate attention?')">
+            <span class="starter-icon">⚡</span>
+            <div class="starter-text">
+              <strong>Urgent Priorities</strong>
+              <span>Check critical escalations</span>
+            </div>
+          </button>
+          <button type="button" class="chat-starter-card" onclick="useSuggestion('Summarize all draft replies waiting for my approval.')">
+            <span class="starter-icon">📝</span>
+            <div class="starter-text">
+              <strong>Pending Approvals</strong>
+              <span>Review AI draft responses</span>
+            </div>
+          </button>
+          <button type="button" class="chat-starter-card" onclick="useSuggestion('Give me an executive briefing of my unread emails.')">
+            <span class="starter-icon">📊</span>
+            <div class="starter-text">
+              <strong>Executive Briefing</strong>
+              <span>Summarize unread inbox</span>
+            </div>
+          </button>
+          <button type="button" class="chat-starter-card" onclick="useSuggestion('What automation rules are currently protecting my mailbox?')">
+            <span class="starter-icon">🛡️</span>
+            <div class="starter-text">
+              <strong>Security & Rules</strong>
+              <span>Review PromptShield status</span>
+            </div>
+          </button>
         </div>
       </div>
     `;

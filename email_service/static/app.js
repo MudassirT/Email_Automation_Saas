@@ -112,7 +112,8 @@ function switchView(viewName) {
     rules: "Automation Rules Engine",
     sent: "Sent History & Outbox",
     logs: "Live Activity Logs",
-    settings: "Configuration & Credentials"
+    settings: "Configuration & Credentials",
+    admin: "Enterprise Admin Monitoring Console"
   };
   const titleEl = document.getElementById("current-view-title");
   if (titleEl) titleEl.textContent = titles[viewName] || "Dashboard";
@@ -124,6 +125,7 @@ function switchView(viewName) {
   if (viewName === "sent") loadSent();
   if (viewName === "logs") loadLogs();
   if (viewName === "settings") loadSettings();
+  if (viewName === "admin") loadAdminView();
 }
 
 // Global Actions & Buttons
@@ -209,6 +211,35 @@ function initActions() {
   if (searchInput) {
     searchInput.addEventListener("input", () => loadInbox());
   }
+
+  // Admin Monitoring Actions
+  const adminRefreshBtn = document.getElementById("btn-admin-refresh");
+  if (adminRefreshBtn) {
+    adminRefreshBtn.addEventListener("click", () => {
+      loadAdminView();
+      showToast("Refreshed system telemetry", "info");
+    });
+  }
+
+  const adminSyncAllBtn = document.getElementById("btn-admin-sync-all");
+  if (adminSyncAllBtn) {
+    adminSyncAllBtn.addEventListener("click", adminSyncAll);
+  }
+
+  const adminLogsBtn = document.getElementById("btn-admin-refresh-logs");
+  if (adminLogsBtn) {
+    adminLogsBtn.addEventListener("click", () => {
+      loadAdminAuditLogs();
+      showToast("Refreshed enterprise audit feed", "info");
+    });
+  }
+
+  const adminUserSearch = document.getElementById("admin-user-search");
+  if (adminUserSearch) {
+    adminUserSearch.addEventListener("input", (e) => {
+      renderAdminUsersTable(e.target.value.trim().toLowerCase());
+    });
+  }
 }
 
 // Modal handling
@@ -255,6 +286,7 @@ async function loadAllData(showToasts = true) {
   else if (currentView === "rules") loadRules();
   else if (currentView === "sent") loadSent();
   else if (currentView === "logs") loadLogs();
+  else if (currentView === "admin") loadAdminView();
 }
 
 async function loadStats() {
@@ -1265,6 +1297,294 @@ async function runSimulation() {
     }
   } catch (e) {
     showToast("Simulation error: " + e.message, "error");
+  }
+}
+
+// ==========================================
+// 8. ENTERPRISE ADMIN MONITORING VIEW
+// ==========================================
+let _cachedAdminUsers = [];
+
+async function loadAdminView() {
+  await loadAdminOverview();
+  await loadAdminUsers();
+  await loadAdminAuditLogs();
+}
+
+async function loadAdminOverview() {
+  try {
+    const res = await fetch("/api/admin/overview");
+    if (!res.ok) return;
+    const data = await res.json();
+
+    const uEl = document.getElementById("admin-stat-users");
+    const eEl = document.getElementById("admin-stat-emails");
+    const unreadEl = document.getElementById("admin-stat-unread");
+    const pEl = document.getElementById("admin-stat-pending");
+    const thrEl = document.getElementById("admin-stat-threats");
+    const badgeEl = document.getElementById("badge-admin-count");
+
+    if (uEl) uEl.textContent = data.total_tenants || 0;
+    if (eEl) eEl.textContent = data.total_emails_ingested || 0;
+    if (unreadEl) unreadEl.textContent = `${data.total_unread_emails || 0} total unread across system`;
+    if (pEl) pEl.textContent = data.total_pending_approvals || 0;
+    if (thrEl) thrEl.textContent = `${data.threats_blocked || 0} prompt threats neutralized`;
+    if (badgeEl) badgeEl.textContent = `${data.total_tenants || 0} Users`;
+  } catch (e) {
+    console.error("Error loading admin overview:", e);
+  }
+}
+
+async function loadAdminUsers() {
+  try {
+    const res = await fetch("/api/admin/users");
+    if (!res.ok) return;
+    _cachedAdminUsers = await res.json();
+    const countBadge = document.getElementById("admin-user-count-badge");
+    if (countBadge) countBadge.textContent = `${_cachedAdminUsers.length} tenants`;
+
+    const searchVal = document.getElementById("admin-user-search")?.value.trim().toLowerCase() || "";
+    renderAdminUsersTable(searchVal);
+  } catch (e) {
+    console.error("Error loading admin users:", e);
+  }
+}
+
+function renderAdminUsersTable(filter = "") {
+  const tbody = document.getElementById("admin-users-table-body");
+  if (!tbody) return;
+
+  const filtered = _cachedAdminUsers.filter(u => {
+    if (!filter) return true;
+    return (
+      (u.user_id || "").toLowerCase().includes(filter) ||
+      (u.email || "").toLowerCase().includes(filter) ||
+      (u.provider || "").toLowerCase().includes(filter) ||
+      (u.display_name || "").toLowerCase().includes(filter)
+    );
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-dim); padding: 30px;">No matching tenants found.</td></tr>`;
+    return;
+  }
+
+  const activeTenantId = localStorage.getItem("automail_user_id") || "default";
+
+  tbody.innerHTML = filtered.map(u => {
+    const isCurrent = u.user_id === activeTenantId;
+    let providerClass = "custom";
+    const pLower = (u.provider || "").toLowerCase();
+    if (pLower.includes("gmail")) providerClass = "gmail";
+    else if (pLower.includes("outlook") || pLower.includes("office365")) providerClass = "outlook";
+    else if (pLower.includes("yahoo")) providerClass = "yahoo";
+
+    const statusBadge = u.status === "Active"
+      ? `<span class="badge badge-success">● Active</span>`
+      : `<span class="badge badge-neutral">Setup Pending</span>`;
+
+    return `
+      <tr style="${isCurrent ? 'background: rgba(99, 102, 241, 0.08);' : ''}">
+        <td>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="tenant-tag">${escapeHtml(u.user_id)}</span>
+            ${isCurrent ? '<span class="badge badge-primary" style="font-size: 0.65rem;">Active Workspace</span>' : ''}
+          </div>
+        </td>
+        <td>
+          <div style="display: flex; flex-direction: column; gap: 3px;">
+            <span style="font-weight: 500; color: #fff;">${escapeHtml(u.email)}</span>
+            <div>
+              <span class="provider-chip ${providerClass}">${escapeHtml(u.provider)}</span>
+            </div>
+          </div>
+        </td>
+        <td>
+          <span style="font-weight: 600; color: #fff;">${u.total_emails}</span>
+          <span style="color: var(--text-dim); font-size: 0.72rem;"> msgs</span>
+        </td>
+        <td>
+          ${u.unread_emails > 0
+            ? `<span style="color: var(--accent-secondary); font-weight: 600;">${u.unread_emails}</span>`
+            : `<span style="color: var(--text-dim);">0</span>`}
+        </td>
+        <td>
+          ${u.pending_approvals > 0 
+            ? `<span class="badge badge-urgent" style="font-weight: 600;">${u.pending_approvals} pending</span>` 
+            : `<span style="color: var(--text-dim); font-size: 0.78rem;">0 pending</span>`}
+        </td>
+        <td>
+          <span style="color: var(--accent-emerald); font-weight: 500;">${u.sent_count || 0}</span>
+        </td>
+        <td>
+          <span style="color: var(--text-dim); font-size: 0.74rem;">${escapeHtml(u.last_sync || 'Never')}</span>
+        </td>
+        <td>${statusBadge}</td>
+        <td style="text-align: right;">
+          <div class="admin-action-btn-group">
+            <button class="btn btn-secondary btn-sm" onclick="adminSyncUser('${escapeHtml(u.user_id)}')" title="Trigger sync for this mailbox">
+              ⚡ Sync
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="adminInspectUser('${escapeHtml(u.user_id)}')" title="Inspect user telemetry">
+              🔍 Inspect
+            </button>
+            ${!isCurrent ? `
+              <button class="btn btn-primary btn-sm" onclick="switchTenant('${escapeHtml(u.user_id)}')" title="Switch to user view">
+                Switch
+              </button>
+            ` : ''}
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+async function adminSyncUser(userId) {
+  showToast(`Initiating sync for tenant '${userId}'...`, "info");
+  try {
+    const res = await fetch(`/api/admin/users/${encodeURIComponent(userId)}/sync`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" }
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      const details = data.details || {};
+      showToast(`Synced '${userId}': ${details.count || 0} new emails.`, "success");
+      await loadAdminUsers();
+      await loadAdminOverview();
+    } else {
+      showToast(`Failed to sync '${userId}': ${data.detail || 'Error'}`, "error");
+    }
+  } catch (e) {
+    showToast(`Sync error: ${e.message}`, "error");
+  }
+}
+
+async function adminSyncAll() {
+  const btn = document.getElementById("btn-admin-sync-all");
+  if (btn) btn.disabled = true;
+  showToast("Triggering global sync across all mailboxes...", "info");
+
+  try {
+    const res = await fetch("/api/admin/sync-all", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" }
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      showToast(`Global sync completed! Processed ${data.synced_tenants} active tenants.`, "success");
+      await loadAdminView();
+    } else {
+      showToast("Global sync failed.", "error");
+    }
+  } catch (e) {
+    showToast(`Global sync error: ${e.message}`, "error");
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function loadAdminAuditLogs() {
+  const terminal = document.getElementById("admin-audit-logs-view");
+  if (!terminal) return;
+
+  try {
+    const res = await fetch("/api/admin/audit-logs?limit=100");
+    if (!res.ok) return;
+    const logs = await res.json();
+
+    if (logs.length === 0) {
+      terminal.innerHTML = `<div style="color: var(--text-dim); text-align: center; padding: 20px;">No audit events recorded yet.</div>`;
+      return;
+    }
+
+    terminal.innerHTML = logs.map(l => `
+      <div class="log-line">
+        <span class="log-time">[${escapeHtml(l.timestamp)}]</span>
+        <span class="tenant-tag" style="margin-right: 4px;">[${escapeHtml(l.tenant_id || 'system')}]</span>
+        <span class="log-cat">[${escapeHtml(l.category)}]</span>
+        <span class="log-level-${escapeHtml(l.level)}">[${escapeHtml(l.level)}]</span>
+        <span style="color: #e2e8f0;">${escapeHtml(l.message)}</span>
+      </div>
+    `).join("");
+  } catch (e) {
+    console.error("Error loading admin audit logs:", e);
+  }
+}
+
+async function adminInspectUser(userId) {
+  try {
+    const res = await fetch(`/api/admin/users/${encodeURIComponent(userId)}/inspect`);
+    if (!res.ok) {
+      showToast("Failed to fetch tenant inspection data", "error");
+      return;
+    }
+    const data = await res.json();
+    const modalTitle = document.getElementById("inspect-modal-title");
+    const modalBody = document.getElementById("inspect-modal-body");
+    const switchBtn = document.getElementById("btn-inspect-switch-to-user");
+
+    if (modalTitle) modalTitle.textContent = `Tenant Telemetry: ${data.user_id}`;
+    if (switchBtn) {
+      switchBtn.onclick = () => {
+        closeModal("modal-inspect-user");
+        switchTenant(data.user_id);
+      };
+    }
+
+    const st = data.stats || {};
+    const emails = data.recent_emails || [];
+    const rules = data.rules || [];
+
+    if (modalBody) {
+      modalBody.innerHTML = `
+        <div class="inspect-grid">
+          <div class="inspect-metric-box">
+            <div class="inspect-metric-label">Connected Email</div>
+            <div style="font-size: 0.85rem; font-weight: 600; color: #fff; word-break: break-all;">${escapeHtml(data.email)}</div>
+          </div>
+          <div class="inspect-metric-box">
+            <div class="inspect-metric-label">Total Ingested</div>
+            <div class="inspect-metric-val">${st.total_emails || 0}</div>
+          </div>
+          <div class="inspect-metric-box">
+            <div class="inspect-metric-label">Pending Approvals</div>
+            <div class="inspect-metric-val" style="color: var(--accent-rose);">${st.pending_approvals || 0}</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <h5 style="font-size: 0.85rem; color: var(--accent-secondary); margin-bottom: 8px;">Active Automation Rules (${rules.length})</h5>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+            ${rules.map(r => `
+              <span class="badge ${r.enabled ? 'badge-neutral' : ''}" style="font-size: 0.72rem;">
+                ${escapeHtml(r.name)} (${escapeHtml(r.action)})
+              </span>
+            `).join("") || '<span style="color: var(--text-dim); font-size: 0.75rem;">No rules configured</span>'}
+          </div>
+        </div>
+
+        <div>
+          <h5 style="font-size: 0.85rem; color: var(--text-main); margin-bottom: 8px;">Recent Emails in Isolated Mailbox</h5>
+          <div style="max-height: 160px; overflow-y: auto; background: var(--bg-surface-elevated); border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); padding: 8px;">
+            ${emails.map(e => `
+              <div style="padding: 6px 8px; border-bottom: 1px solid var(--border-subtle); font-size: 0.76rem; display: flex; justify-content: space-between; align-items: center;">
+                <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%;">
+                  <strong style="color: #fff;">${escapeHtml(e.subject)}</strong>
+                  <div style="color: var(--text-dim);">${escapeHtml(e.from)}</div>
+                </div>
+                <span class="badge badge-neutral" style="font-size: 0.68rem;">${escapeHtml(e.category || 'General')}</span>
+              </div>
+            `).join("") || '<div style="color: var(--text-dim); font-size: 0.75rem; padding: 10px; text-align: center;">Mailbox is empty</div>'}
+          </div>
+        </div>
+      `;
+    }
+
+    openModal("modal-inspect-user");
+  } catch (e) {
+    showToast(`Inspect error: ${e.message}`, "error");
   }
 }
 

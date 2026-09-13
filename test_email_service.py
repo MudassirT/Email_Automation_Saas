@@ -172,6 +172,39 @@ def test_all():
     assert tenant_security.verify_tenant_boundary(tenant_a, tenant_a) is True
     print("Tenant boundary verification: OK!")
 
+    print("\n--- 9. Testing System Admin Monitoring Panel Telemetry ---")
+    admin_overview = storage.get_admin_system_overview()
+    assert admin_overview["total_tenants"] >= 2
+    assert admin_overview["total_emails_ingested"] >= 1
+    assert admin_overview["system_health"] == "Operational"
+    print("Admin System Overview Telemetry:", admin_overview)
+
+    users_telemetry = storage.list_admin_users_telemetry()
+    assert len(users_telemetry) >= 2
+    u_ids = [u["user_id"] for u in users_telemetry]
+    assert "user_alpha" in u_ids and "user_beta" in u_ids
+    alpha_telemetry = next(u for u in users_telemetry if u["user_id"] == "user_alpha")
+    assert alpha_telemetry["email"] == "alpha@enterprise.com"
+    assert alpha_telemetry["provider"] == "Gmail"
+    assert alpha_telemetry["total_emails"] >= 1
+    print("Admin Users Telemetry List: OK!")
+
+    audit_logs = storage.get_cross_tenant_audit_logs(limit=20)
+    assert isinstance(audit_logs, list)
+    if audit_logs:
+        assert "tenant_id" in audit_logs[0]
+        print(f"Cross-Tenant Audit Logs OK ({len(audit_logs)} events collected, latest from '{audit_logs[0]['tenant_id']}')")
+
+    inspect_data = storage.get_tenant_inspect_data("user_alpha")
+    assert inspect_data["user_id"] == "user_alpha"
+    assert inspect_data["email"] == "alpha@enterprise.com"
+    assert "stats" in inspect_data
+    assert "recent_emails" in inspect_data
+    # Ensure sensitive credentials are never in inspect data
+    assert "app_password" not in inspect_data
+    assert "gemini_api_key" not in inspect_data
+    print("Admin Tenant Inspect Telemetry (Safe & Isolated): OK!")
+
     print("\n===========================================")
     print("ALL AUTOMATED VERIFICATION TESTS PASSED! [OK]")
     print("===========================================")

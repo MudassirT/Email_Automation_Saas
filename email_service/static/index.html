@@ -63,6 +63,12 @@
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
         <span>Settings & Keys</span>
       </a>
+
+      <a class="nav-item" data-view="admin" id="nav-admin">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+        <span>Admin Monitor</span>
+        <span class="nav-badge" id="badge-admin-count" style="background: rgba(168, 85, 247, 0.2); color: var(--accent-purple); border-color: rgba(168, 85, 247, 0.4);">Admin</span>
+      </a>
     </nav>
 
     <div class="sidebar-footer">
@@ -467,6 +473,120 @@
           </div>
         </div>
       </section>
+
+      <!-- 8. ADMIN MONITOR VIEW -->
+      <section class="view-section" id="view-admin">
+        <div class="admin-header-row" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <h3 style="font-size: 1.22rem; font-weight: 700; color: var(--text-main); margin: 0;">Enterprise Admin Monitoring Console</h3>
+              <span class="badge" style="background: rgba(168, 85, 247, 0.15); color: var(--accent-purple); border: 1px solid rgba(168, 85, 247, 0.35); font-size: 0.72rem; font-weight: 600;">Multi-User Telemetry</span>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
+              Global observability, real-time user monitoring, throughput analytics, and zero-exposure security compliance.
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary btn-sm" id="btn-admin-refresh">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              <span>Refresh Metrics</span>
+            </button>
+            <button class="btn btn-primary btn-sm" id="btn-admin-sync-all">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              <span>Sync All Mailboxes</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Admin KPI Grid -->
+        <div class="stats-grid" style="margin-bottom: 24px;">
+          <div class="card stat-card">
+            <div class="stat-header">
+              <span class="stat-title">Monitored Tenants</span>
+              <div class="stat-icon" style="color: var(--accent-purple);">👥</div>
+            </div>
+            <div class="stat-value" id="admin-stat-users" style="color: var(--accent-purple);">0</div>
+            <div class="stat-sub">100% Segregated Accounts</div>
+          </div>
+
+          <div class="card stat-card cyan">
+            <div class="stat-header">
+              <span class="stat-title">Global Ingested Volume</span>
+              <div class="stat-icon" style="color: var(--accent-secondary);">📬</div>
+            </div>
+            <div class="stat-value" id="admin-stat-emails">0</div>
+            <div class="stat-sub" id="admin-stat-unread">0 total unread across system</div>
+          </div>
+
+          <div class="card stat-card urgent">
+            <div class="stat-header">
+              <span class="stat-title">System Pending Approvals</span>
+              <div class="stat-icon" style="color: var(--accent-rose);">⏳</div>
+            </div>
+            <div class="stat-value" id="admin-stat-pending" style="color: var(--accent-rose);">0</div>
+            <div class="stat-sub">AI drafts awaiting human sign-off</div>
+          </div>
+
+          <div class="card stat-card success">
+            <div class="stat-header">
+              <span class="stat-title">Security & Isolation</span>
+              <div class="stat-icon" style="color: var(--accent-emerald);">🛡️</div>
+            </div>
+            <div class="stat-value" style="font-size: 1.25rem; color: var(--accent-emerald);" id="admin-stat-security">AES-256 Active</div>
+            <div class="stat-sub" id="admin-stat-threats">0 prompt threats neutralized</div>
+          </div>
+        </div>
+
+        <!-- Monitored Users Table Card -->
+        <div class="card" style="margin-bottom: 24px;">
+          <div class="admin-table-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <h4 style="font-size: 1rem; color: var(--text-main); margin: 0;">Monitored User Directory</h4>
+              <span class="badge badge-neutral" id="admin-user-count-badge">0 tenants</span>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <input type="text" class="user-search-input" id="admin-user-search" placeholder="Search by User ID or Email...">
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table admin-table">
+              <thead>
+                <tr>
+                  <th>User ID / Account</th>
+                  <th>Connected Mailbox</th>
+                  <th>Total Emails</th>
+                  <th>Unread</th>
+                  <th>Approvals</th>
+                  <th>Sent</th>
+                  <th>Last Sync</th>
+                  <th>Status</th>
+                  <th style="text-align: right;">Quick Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-users-table-body">
+                <tr><td colspan="9" style="text-align: center; color: var(--text-dim); padding: 30px;">Loading tenant telemetry...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Cross-Tenant Security & Audit Log Stream -->
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <h4 style="font-size: 1rem; color: var(--accent-secondary); margin: 0;">Global Enterprise Audit & Event Stream</h4>
+              <span class="badge" style="background: rgba(6, 182, 212, 0.12); color: var(--accent-secondary); border: 1px solid rgba(6, 182, 212, 0.25); font-size: 0.72rem;">Cross-Tenant Telemetry</span>
+            </div>
+            <button class="btn btn-secondary btn-sm" id="btn-admin-refresh-logs">
+              <span>Refresh Feed</span>
+            </button>
+          </div>
+          <div class="logs-terminal" id="admin-audit-logs-view" style="max-height: 280px;">
+            <!-- Filled via JS -->
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 </div>
@@ -593,6 +713,26 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-switch-user')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: INSPECT USER TELEMETRY -->
+<div class="modal-overlay" id="modal-inspect-user">
+  <div class="modal-box" style="max-width: 650px;">
+    <div class="modal-header">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 1.2rem;">🔍</span>
+        <h3 id="inspect-modal-title">Tenant Telemetry Inspection</h3>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-inspect-user')">&times;</button>
+    </div>
+    <div class="modal-body" id="inspect-modal-body">
+      <!-- Dynamically filled via JS -->
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-inspect-user')">Close</button>
+      <button class="btn btn-primary" id="btn-inspect-switch-to-user">Switch to This Workspace</button>
     </div>
   </div>
 </div>

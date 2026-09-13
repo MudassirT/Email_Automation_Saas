@@ -205,6 +205,55 @@ def switch_tenant(payload: SwitchTenantPayload, response: Response):
     }
 
 
+# --- ADMIN MONITORING ENDPOINTS ---
+@app.get("/api/admin/overview")
+def get_admin_overview():
+    """Retrieve global system-wide KPIs across all tenants."""
+    return storage.get_admin_system_overview()
+
+
+@app.get("/api/admin/users")
+def get_admin_users():
+    """Retrieve list of all monitored tenants and their live telemetry."""
+    return storage.list_admin_users_telemetry()
+
+
+@app.post("/api/admin/users/{user_id}/sync")
+def admin_sync_user(user_id: str):
+    """Admin-triggered on-demand synchronization for a specific user mailbox."""
+    clean_id = tenant_security.sanitize_tenant_id(user_id)
+    res = email_engine.sync_emails(user_id=clean_id)
+    storage.for_user(clean_id).log("ADMIN", f"Admin initiated manual email sync for tenant '{clean_id}'", "INFO")
+    return {"success": True, "details": res, "user_id": clean_id}
+
+
+@app.post("/api/admin/sync-all")
+def admin_sync_all():
+    """Admin-triggered sync across all configured user accounts."""
+    tenants = storage.list_tenants()
+    results = {}
+    for t in tenants:
+        uid = t["id"]
+        cfg = load_config(user_id=uid)
+        if cfg.get("account", {}).get("email_address"):
+            r = email_engine.sync_emails(user_id=uid)
+            results[uid] = r
+    return {"success": True, "synced_tenants": len(results), "results": results}
+
+
+@app.get("/api/admin/audit-logs")
+def get_admin_audit_logs(limit: int = 150):
+    """Retrieve unified cross-tenant security and operational audit stream."""
+    return storage.get_cross_tenant_audit_logs(limit=limit)
+
+
+@app.get("/api/admin/users/{user_id}/inspect")
+def get_admin_user_inspect(user_id: str):
+    """Retrieve telemetry deep-dive for a specific tenant."""
+    clean_id = tenant_security.sanitize_tenant_id(user_id)
+    return storage.get_tenant_inspect_data(clean_id)
+
+
 # --- API ENDPOINTS ---
 @app.get("/api/stats")
 def get_stats(user_id: str = Depends(get_current_user_id)):

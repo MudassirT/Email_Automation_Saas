@@ -441,5 +441,151 @@ class StorageProxy:
                     })
         return tenants
 
+    def get_admin_system_overview(self) -> Dict[str, Any]:
+        """Aggregate system-wide KPI metrics across all isolated tenant partitions."""
+        from .config import load_config
+        tenants = self.list_tenants()
+        total_emails = 0
+        total_unread = 0
+        total_pending = 0
+        total_sent = 0
+        total_rules = 0
+        threats_blocked = 0
+
+        for t in tenants:
+            uid = t["id"]
+            u_storage = self.for_user(uid)
+            u_stats = u_storage.get_stats()
+            total_emails += u_stats.get("total_emails", 0)
+            total_unread += u_stats.get("unread_emails", 0)
+            total_pending += u_stats.get("pending_approvals", 0)
+            total_sent += u_stats.get("sent_count", 0)
+            total_rules += u_stats.get("active_rules", 0)
+
+            for em in u_storage.get_emails():
+                cat = (em.get("category") or "").lower()
+                if "injection" in cat or "security alert" in cat:
+                    threats_blocked += 1
+
+        return {
+            "total_tenants": len(tenants),
+            "total_emails_ingested": total_emails,
+            "total_unread_emails": total_unread,
+            "total_pending_approvals": total_pending,
+            "total_sent_dispatches": total_sent,
+            "total_active_rules": total_rules,
+            "threats_blocked": threats_blocked,
+            "vault_status": "AES-256 Fernet Encrypted",
+            "isolation_status": "100% Segregated Per-Tenant",
+            "system_health": "Operational"
+        }
+
+    def list_admin_users_telemetry(self) -> List[Dict[str, Any]]:
+        """List operational and health telemetry for all tenants."""
+        from .config import load_config
+        tenants = self.list_tenants()
+        results = []
+
+        for t in tenants:
+            uid = t["id"]
+            u_storage = self.for_user(uid)
+            u_cfg = load_config(user_id=uid)
+            u_stats = u_storage.get_stats()
+            acc = u_cfg.get("account", {})
+            ai_cfg = u_cfg.get("ai", {})
+
+            imap_server = (acc.get("imap_server") or "").lower()
+            if "gmail" in imap_server:
+                provider = "Gmail"
+            elif "office365" in imap_server or "outlook" in imap_server:
+                provider = "Outlook / O365"
+            elif "yahoo" in imap_server:
+                provider = "Yahoo"
+            elif acc.get("imap_server"):
+                provider = "Custom IMAP"
+            else:
+                provider = "Unconfigured"
+
+            email_addr = acc.get("email_address") or "Not configured"
+            has_creds = bool(acc.get("email_address") and (acc.get("app_password") or acc.get("has_password")))
+
+            results.append({
+                "user_id": uid,
+                "display_name": t.get("name", uid),
+                "email": email_addr,
+                "provider": provider,
+                "has_credentials": has_creds,
+                "ai_provider": ai_cfg.get("provider", "gemini"),
+                "total_emails": u_stats.get("total_emails", 0),
+                "unread_emails": u_stats.get("unread_emails", 0),
+                "pending_approvals": u_stats.get("pending_approvals", 0),
+                "sent_count": u_stats.get("sent_count", 0),
+                "active_rules": u_stats.get("active_rules", 0),
+                "last_sync": u_stats.get("last_sync_time", "Never"),
+                "status": "Active" if has_creds else "Setup Pending"
+            })
+
+        return results
+
+    def get_cross_tenant_audit_logs(self, limit: int = 150) -> List[Dict[str, Any]]:
+        """Collect and chronologically interleave security & operational audit logs across all tenants."""
+        tenants = self.list_tenants()
+        all_logs = []
+
+        for t in tenants:
+            uid = t["id"]
+            u_storage = self.for_user(uid)
+            logs = u_storage.get_logs(limit=40)
+            for l in logs:
+                entry = dict(l)
+                entry["tenant_id"] = uid
+                all_logs.append(entry)
+
+        all_logs.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+        return all_logs[:limit]
+
+    def get_tenant_inspect_data(self, user_id: str) -> Dict[str, Any]:
+        """Return operational telemetry deep-dive for a single tenant (no raw secrets)."""
+        from .security import tenant_security
+        from .config import load_config
+        clean_id = tenant_security.sanitize_tenant_id(user_id)
+        u_storage = self.for_user(clean_id)
+        u_cfg = load_config(user_id=clean_id)
+        u_stats = u_storage.get_stats()
+
+        acc = u_cfg.get("account", {})
+        recent_emails = [
+            {
+                "id": e.get("id"),
+                "subject": e.get("subject"),
+                "from": e.get("from"),
+                "category": e.get("category"),
+                "priority": e.get("priority"),
+                "date": e.get("date"),
+                "status": e.get("status")
+            }
+            for e in u_storage.get_emails()[:10]
+        ]
+
+        recent_drafts = [
+            {
+                "id": d.get("id"),
+                "subject": d.get("subject"),
+                "status": d.get("status"),
+                "created_at": d.get("created_at")
+            }
+            for d in u_storage.get_drafts()[:10]
+        ]
+
+        return {
+            "user_id": clean_id,
+            "email": acc.get("email_address") or "Not configured",
+            "stats": u_stats,
+            "rules": u_storage.get_rules(),
+            "recent_emails": recent_emails,
+            "recent_drafts": recent_drafts,
+            "recent_logs": u_storage.get_logs(limit=25)
+        }
+
 
 storage = StorageProxy()

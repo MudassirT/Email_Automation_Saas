@@ -17,7 +17,7 @@ from typing import Dict, Any, Optional, List
 
 from fastapi import FastAPI, HTTPException, Request, Response, BackgroundTasks, Depends
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
@@ -27,6 +27,7 @@ from .storage import storage
 from .email_engine import email_engine
 from .ai_engine import ai_engine
 from .security import vault, dispatch_limiter, api_rate_limiter, tenant_security
+from .auth import user_manager, google_oauth, create_jwt_token, decode_jwt_token
 
 BASE_DIR = Path(__file__).parent
 STATIC_DIR = BASE_DIR / "static"
@@ -88,15 +89,62 @@ async def security_middleware(request: Request, call_next):
     return response
 
 
-# Tenant ID extractor & sanitizer
+# User Account & Tenant Auth extractor
+def get_current_user_account(request: Request) -> Optional[Dict[str, Any]]:
+    """Authenticate user via JWT Bearer token, session cookie, or fallback headers."""
+    # 1. Bearer Token in Authorization header
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:].strip()
+        payload = decode_jwt_token(token)
+        if payload and "sub" in payload:
+            user = user_manager.get_user_by_id(payload["sub"])
+            if user:
+                return user
+
+    # 2. Cookie token
+    token_cookie = request.cookies.get("automail_token")
+    if token_cookie:
+        payload = decode_jwt_token(token_cookie)
+        if payload and "sub" in payload:
+            user = user_manager.get_user_by_id(payload["sub"])
+            if user:
+                return user
+
+    # 3. Direct user_id header or cookie fallback
+    uid = request.headers.get("X-User-Id") or request.cookies.get("automail_user_id") or request.query_params.get("user_id")
+    if uid:
+        clean_id = tenant_security.sanitize_tenant_id(uid)
+        user = user_manager.get_user_by_id(clean_id)
+        if user:
+            return user
+        return {
+            "id": clean_id,
+            "email": f"{clean_id}@automail.local",
+            "name": clean_id.capitalize(),
+            "role": "admin" if clean_id == "default" else "user",
+            "provider": "local"
+        }
+    return None
+
+
 def get_current_user_id(request: Request) -> str:
     """Extract, sanitize, and validate requesting tenant user ID."""
-    uid = request.headers.get("X-User-Id")
-    if not uid:
-        uid = request.cookies.get("automail_user_id")
-    if not uid:
-        uid = request.query_params.get("user_id", "default")
-    return tenant_security.sanitize_tenant_id(uid)
+    user = get_current_user_account(request)
+    if user and "id" in user:
+        return tenant_security.sanitize_tenant_id(user["id"])
+    return "default"
+
+
+def require_admin(request: Request) -> Dict[str, Any]:
+    """Ensure requesting user possesses the 'admin' role."""
+    user = get_current_user_account(request)
+    if not user or user.get("role") != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Access forbidden: Enterprise Admin privileges required."
+        )
+    return user
 
 
 # Mount static directory
@@ -158,6 +206,19 @@ class SimulatePayload(BaseModel):
 class SwitchTenantPayload(BaseModel):
     user_id: str
 
+class RegisterPayload(BaseModel):
+    email: str
+    password: str
+    display_name: Optional[str] = ""
+
+class LoginPayload(BaseModel):
+    email: str
+    password: str
+
+class GoogleDemoPayload(BaseModel):
+    email: Optional[str] = "demo.google.user@gmail.com"
+    name: Optional[str] = "Google Demo Account"
+
 
 # --- FRONTEND ROUTE ---
 @app.get("/")
@@ -170,13 +231,112 @@ def serve_dashboard():
 
 # --- AUTH & TENANT ENDPOINTS ---
 @app.get("/api/auth/me")
-def get_auth_me(user_id: str = Depends(get_current_user_id)):
+def get_auth_me(request: Request):
+    user = get_current_user_account(request)
+    if not user:
+        # Check default user
+        user = user_manager.get_user_by_id("default")
+    user_id = user["id"] if user else "default"
     cfg = load_config(user_id=user_id)
     return {
+        "authenticated": bool(user),
+        "user": user,
         "active_user_id": user_id,
-        "email": cfg.get("account", {}).get("email", ""),
+        "email": user.get("email") if user else cfg.get("account", {}).get("email", ""),
+        "name": user.get("name") if user else "User",
+        "role": user.get("role", "user") if user else "user",
+        "provider": user.get("provider", "local") if user else "local",
         "tenants": storage.list_tenants()
     }
+
+
+@app.post("/api/auth/register")
+def register(payload: RegisterPayload, response: Response):
+    success, msg, user = user_manager.register_user(
+        email=payload.email,
+        password=payload.password,
+        display_name=payload.display_name
+    )
+    if not success or not user:
+        raise HTTPException(status_code=400, detail=msg)
+
+    token = create_jwt_token(user)
+    response.set_cookie(key="automail_token", value=token, httponly=False, samesite="lax", max_age=2592000)
+    response.set_cookie(key="automail_user_id", value=user["id"], httponly=False, samesite="lax", max_age=2592000)
+    storage.for_user(user["id"]).log("AUTH", f"User registered account: {user['email']}", "SUCCESS")
+    return {"success": True, "token": token, "user": user, "message": msg}
+
+
+@app.post("/api/auth/login")
+def login(payload: LoginPayload, response: Response):
+    success, msg, user = user_manager.authenticate_local(
+        email=payload.email,
+        password=payload.password
+    )
+    if not success or not user:
+        raise HTTPException(status_code=401, detail=msg)
+
+    token = create_jwt_token(user)
+    response.set_cookie(key="automail_token", value=token, httponly=False, samesite="lax", max_age=2592000)
+    response.set_cookie(key="automail_user_id", value=user["id"], httponly=False, samesite="lax", max_age=2592000)
+    storage.for_user(user["id"]).log("AUTH", f"User logged in: {user['email']}", "SUCCESS")
+    return {"success": True, "token": token, "user": user, "message": msg}
+
+
+@app.post("/api/auth/logout")
+def logout(response: Response):
+    response.delete_cookie("automail_token")
+    response.delete_cookie("automail_user_id")
+    return {"success": True, "message": "Logged out successfully"}
+
+
+@app.get("/api/auth/google/url")
+def get_google_oauth_url():
+    """Returns Google OAuth 2.0 redirection URL based on .env configuration."""
+    auth_url = google_oauth.get_authorization_url()
+    return {
+        "configured": google_oauth.is_configured(),
+        "url": auth_url,
+        "client_id": google_oauth.client_id,
+        "callback_url": google_oauth.redirect_uri
+    }
+
+
+@app.get("/api/auth/google/callback")
+def google_callback(code: Optional[str] = None, error: Optional[str] = None):
+    """Callback receiver for Google OAuth redirect."""
+    if error or not code:
+        return RedirectResponse(url=f"/?auth_error={error or 'cancelled'}")
+
+    user_info = google_oauth.exchange_code_for_token(code)
+    if not user_info:
+        return RedirectResponse(url="/?auth_error=google_token_exchange_failed")
+
+    user = user_manager.find_or_create_google_user(user_info)
+    token = create_jwt_token(user)
+
+    response = RedirectResponse(url=f"/?token={token}&user_id={user['id']}")
+    response.set_cookie(key="automail_token", value=token, httponly=False, samesite="lax", max_age=2592000)
+    response.set_cookie(key="automail_user_id", value=user["id"], httponly=False, samesite="lax", max_age=2592000)
+    storage.for_user(user["id"]).log("AUTH", f"Google OAuth login successful for {user['email']}", "SUCCESS")
+    return response
+
+
+@app.post("/api/auth/google/demo")
+def google_demo_login(payload: GoogleDemoPayload, response: Response):
+    """Instant Google login simulation for immediate testing before real client credentials are set in .env."""
+    mock_info = {
+        "email": payload.email or "demo.google.user@gmail.com",
+        "name": payload.name or "Google Demo Account",
+        "sub": "google-demo-" + str(int(time.time()))
+    }
+    user = user_manager.find_or_create_google_user(mock_info)
+    token = create_jwt_token(user)
+
+    response.set_cookie(key="automail_token", value=token, httponly=False, samesite="lax", max_age=2592000)
+    response.set_cookie(key="automail_user_id", value=user["id"], httponly=False, samesite="lax", max_age=2592000)
+    storage.for_user(user["id"]).log("AUTH", f"Google Demo Login session active for {user['email']}", "SUCCESS")
+    return {"success": True, "token": token, "user": user, "is_demo": True}
 
 
 @app.get("/api/auth/tenants")
@@ -205,22 +365,22 @@ def switch_tenant(payload: SwitchTenantPayload, response: Response):
     }
 
 
-# --- ADMIN MONITORING ENDPOINTS ---
+# --- ADMIN MONITORING ENDPOINTS (PROTECTED WITH RBAC) ---
 @app.get("/api/admin/overview")
-def get_admin_overview():
-    """Retrieve global system-wide KPIs across all tenants."""
+def get_admin_overview(admin_user: Dict[str, Any] = Depends(require_admin)):
+    """Retrieve global system-wide KPIs across all tenants (Admin only)."""
     return storage.get_admin_system_overview()
 
 
 @app.get("/api/admin/users")
-def get_admin_users():
-    """Retrieve list of all monitored tenants and their live telemetry."""
+def get_admin_users(admin_user: Dict[str, Any] = Depends(require_admin)):
+    """Retrieve list of all monitored tenants and their live telemetry (Admin only)."""
     return storage.list_admin_users_telemetry()
 
 
 @app.post("/api/admin/users/{user_id}/sync")
-def admin_sync_user(user_id: str):
-    """Admin-triggered on-demand synchronization for a specific user mailbox."""
+def admin_sync_user(user_id: str, admin_user: Dict[str, Any] = Depends(require_admin)):
+    """Admin-triggered on-demand synchronization for a specific user mailbox (Admin only)."""
     clean_id = tenant_security.sanitize_tenant_id(user_id)
     res = email_engine.sync_emails(user_id=clean_id)
     storage.for_user(clean_id).log("ADMIN", f"Admin initiated manual email sync for tenant '{clean_id}'", "INFO")
@@ -228,28 +388,28 @@ def admin_sync_user(user_id: str):
 
 
 @app.post("/api/admin/sync-all")
-def admin_sync_all():
-    """Admin-triggered sync across all configured user accounts."""
+def admin_sync_all(admin_user: Dict[str, Any] = Depends(require_admin)):
+    """Admin-triggered sync across all configured user accounts (Admin only)."""
     tenants = storage.list_tenants()
     results = {}
     for t in tenants:
         uid = t["id"]
         cfg = load_config(user_id=uid)
-        if cfg.get("account", {}).get("email_address"):
+        if cfg.get("account", {}).get("email_address") or cfg.get("account", {}).get("email"):
             r = email_engine.sync_emails(user_id=uid)
             results[uid] = r
     return {"success": True, "synced_tenants": len(results), "results": results}
 
 
 @app.get("/api/admin/audit-logs")
-def get_admin_audit_logs(limit: int = 150):
-    """Retrieve unified cross-tenant security and operational audit stream."""
+def get_admin_audit_logs(limit: int = 150, admin_user: Dict[str, Any] = Depends(require_admin)):
+    """Retrieve unified cross-tenant security and operational audit stream (Admin only)."""
     return storage.get_cross_tenant_audit_logs(limit=limit)
 
 
 @app.get("/api/admin/users/{user_id}/inspect")
-def get_admin_user_inspect(user_id: str):
-    """Retrieve telemetry deep-dive for a specific tenant."""
+def get_admin_user_inspect(user_id: str, admin_user: Dict[str, Any] = Depends(require_admin)):
+    """Retrieve telemetry deep-dive for a specific tenant (Admin only)."""
     clean_id = tenant_security.sanitize_tenant_id(user_id)
     return storage.get_tenant_inspect_data(clean_id)
 

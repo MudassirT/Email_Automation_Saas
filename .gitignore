@@ -16,6 +16,7 @@ credentials.json
 token.json
 .env
 .env.*
+!.env.example
 *.key
 *.pem
 *.crt

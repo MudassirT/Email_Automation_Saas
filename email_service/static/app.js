@@ -5,19 +5,26 @@
  */
 
 // Security: Global Anti-CSRF header injector for mutating requests
-// Security: Global Anti-CSRF and Multi-Tenant Isolation header injector
+// Security: Global Anti-CSRF, Multi-Tenant Isolation, and JWT Auth token injector
 const _origFetch = window.fetch;
 window.fetch = function(url, options = {}) {
   options.headers = options.headers || {};
   const currentUserId = localStorage.getItem("automail_user_id") || "default";
+  const token = localStorage.getItem("automail_token") || "";
 
   if (typeof options.headers.set === "function") {
     options.headers.set("X-User-Id", currentUserId);
+    if (token) {
+      options.headers.set("Authorization", `Bearer ${token}`);
+    }
     if (options.method && options.method !== "GET") {
       options.headers.set("X-Requested-With", "AutoMail");
     }
   } else {
     options.headers["X-User-Id"] = currentUserId;
+    if (token) {
+      options.headers["Authorization"] = `Bearer ${token}`;
+    }
     if (options.method && options.method !== "GET") {
       options.headers["X-Requested-With"] = "AutoMail";
     }
@@ -29,16 +36,35 @@ let currentView = "overview";
 let currentCategory = "All";
 let selectedEmailId = null;
 let refreshInterval = null;
+let currentUser = null;
 
 // DOM Ready
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  // Check for Google OAuth callback parameters in URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const redirectToken = urlParams.get("token");
+  const redirectUserId = urlParams.get("user_id");
+  const authError = urlParams.get("auth_error");
+
+  if (redirectToken) {
+    localStorage.setItem("automail_token", redirectToken);
+    if (redirectUserId) localStorage.setItem("automail_user_id", redirectUserId);
+    window.history.replaceState({}, document.title, window.location.pathname);
+    showToast("Google sign-in successful! Welcome to your isolated workspace.", "success");
+  } else if (authError) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+    showToast(`Google login issue: ${authError}`, "error");
+  }
+
   initTheme();
   initNav();
   initModals();
   initActions();
   initUserSwitcher();
   initProviderPresets();
-  loadAllData();
+
+  await checkAuthStatus();
+  await loadAllData();
 
   // Auto-refresh interval (every 12 seconds)
   refreshInterval = setInterval(() => {
@@ -1597,4 +1623,246 @@ function escapeHtml(str) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+// ==========================================================================
+// 9. AUTHENTICATION & MULTI-USER RBAC SUBSYSTEM
+// ==========================================================================
+
+async function checkAuthStatus() {
+  try {
+    const res = await fetch("/api/auth/me");
+    if (res.ok) {
+      const data = await res.json();
+      currentUser = data.user || null;
+      const activeId = data.active_user_id || "default";
+      localStorage.setItem("automail_user_id", activeId);
+      updateUserProfileUI(data);
+    }
+  } catch (e) {
+    console.error("Auth status error:", e);
+  }
+}
+
+function updateUserProfileUI(authData) {
+  const user = authData?.user;
+  const activeId = authData?.active_user_id || "default";
+  const role = authData?.role || (activeId === "default" ? "admin" : "user");
+  const email = authData?.email || `${activeId}@automail.local`;
+  const name = authData?.name || user?.name || (activeId === "default" ? "Admin Account" : activeId);
+
+  // Update Sidebar Profile Card
+  const nameEl = document.getElementById("sidebar-user-name");
+  const emailEl = document.getElementById("sidebar-user-email");
+  const avatarEl = document.getElementById("sidebar-user-avatar");
+  const roleEl = document.getElementById("sidebar-user-role");
+
+  if (nameEl) nameEl.textContent = name;
+  if (emailEl) emailEl.textContent = email;
+  if (avatarEl) avatarEl.textContent = (name || "U")[0].toUpperCase();
+  if (roleEl) {
+    roleEl.textContent = role === "admin" ? "Admin" : "User";
+    roleEl.className = `badge ${role === "admin" ? "badge-primary" : "badge-neutral"} user-role-badge`;
+  }
+
+  // Update Topbar
+  const topbarAuthLabel = document.getElementById("topbar-auth-label");
+  if (topbarAuthLabel) {
+    topbarAuthLabel.textContent = localStorage.getItem("automail_token") ? "Account" : "Sign In";
+  }
+  const currentBadge = document.getElementById("current-user-badge");
+  if (currentBadge) {
+    currentBadge.textContent = `User: ${activeId}`;
+  }
+
+  // RBAC: Show or Hide Admin Nav Item
+  const adminNav = document.getElementById("nav-admin");
+  if (adminNav) {
+    if (role === "admin") {
+      adminNav.style.display = "flex";
+    } else {
+      adminNav.style.display = "none";
+      if (currentView === "admin") {
+        switchView("overview");
+      }
+    }
+  }
+}
+
+function openAuthModal(tab = "login") {
+  setAuthTab(tab);
+  const alertEl = document.getElementById("auth-alert");
+  if (alertEl) alertEl.style.display = "none";
+  openModal("modal-auth");
+}
+
+function setAuthTab(tab) {
+  const tabLogin = document.getElementById("tab-login");
+  const tabRegister = document.getElementById("tab-register");
+  const formLogin = document.getElementById("form-login");
+  const formRegister = document.getElementById("form-register");
+  const modalTitle = document.getElementById("auth-modal-title");
+
+  if (tab === "login") {
+    tabLogin?.classList.add("active");
+    tabRegister?.classList.remove("active");
+    if (formLogin) formLogin.style.display = "block";
+    if (formRegister) formRegister.style.display = "none";
+    if (modalTitle) modalTitle.textContent = "Sign In to Workspace";
+  } else {
+    tabLogin?.classList.remove("active");
+    tabRegister?.classList.add("active");
+    if (formLogin) formLogin.style.display = "none";
+    if (formRegister) formRegister.style.display = "block";
+    if (modalTitle) modalTitle.textContent = "Create Isolated Account";
+  }
+}
+
+async function submitLogin() {
+  const email = document.getElementById("login-email")?.value.trim();
+  const password = document.getElementById("login-password")?.value;
+  const alertEl = document.getElementById("auth-alert");
+  const btn = document.getElementById("btn-submit-login");
+
+  if (!email || !password) return;
+  if (btn) btn.disabled = true;
+
+  try {
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      localStorage.setItem("automail_token", data.token);
+      localStorage.setItem("automail_user_id", data.user.id);
+      closeModal("modal-auth");
+      showToast(`Welcome back, ${data.user.name || data.user.email}!`, "success");
+      await checkAuthStatus();
+      selectedEmailId = null;
+      await loadAllData(false);
+      await loadSettings();
+    } else {
+      if (alertEl) {
+        alertEl.className = "auth-alert error";
+        alertEl.style.display = "flex";
+        alertEl.textContent = data.detail || "Invalid email or password.";
+      }
+    }
+  } catch (e) {
+    if (alertEl) {
+      alertEl.className = "auth-alert error";
+      alertEl.style.display = "flex";
+      alertEl.textContent = "Network error: " + e.message;
+    }
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function submitRegister() {
+  const name = document.getElementById("reg-name")?.value.trim();
+  const email = document.getElementById("reg-email")?.value.trim();
+  const password = document.getElementById("reg-password")?.value;
+  const alertEl = document.getElementById("auth-alert");
+  const btn = document.getElementById("btn-submit-register");
+
+  if (!email || !password) return;
+  if (btn) btn.disabled = true;
+
+  try {
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, display_name: name })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      localStorage.setItem("automail_token", data.token);
+      localStorage.setItem("automail_user_id", data.user.id);
+      closeModal("modal-auth");
+      showToast(`Account created! Welcome, ${data.user.name || data.user.email}.`, "success");
+      await checkAuthStatus();
+      selectedEmailId = null;
+      await loadAllData(false);
+      await loadSettings();
+    } else {
+      if (alertEl) {
+        alertEl.className = "auth-alert error";
+        alertEl.style.display = "flex";
+        alertEl.textContent = data.detail || "Registration failed.";
+      }
+    }
+  } catch (e) {
+    if (alertEl) {
+      alertEl.className = "auth-alert error";
+      alertEl.style.display = "flex";
+      alertEl.textContent = "Network error: " + e.message;
+    }
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function handleGoogleSignIn() {
+  const btnText = document.getElementById("google-btn-text");
+  if (btnText) btnText.textContent = "Connecting to Google...";
+
+  try {
+    const res = await fetch("/api/auth/google/url");
+    const data = await res.json();
+
+    if (data.configured && data.url) {
+      // Redirect to official Google OAuth consent screen
+      window.location.href = data.url;
+      return;
+    }
+
+    // If Google credentials are not yet entered in .env, offer immediate Demo Google Sign-In
+    showToast("Google credentials pending in .env. Initializing 1-Click Google Account Sign-In...", "info");
+    const demoRes = await fetch("/api/auth/google/demo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: "user.google@gmail.com",
+        name: "Google Connected User"
+      })
+    });
+    const demoData = await demoRes.json();
+    if (demoRes.ok && demoData.success) {
+      localStorage.setItem("automail_token", demoData.token);
+      localStorage.setItem("automail_user_id", demoData.user.id);
+      closeModal("modal-auth");
+      showToast(`Logged in with Google as ${demoData.user.email}! (Tenant: ${demoData.user.id})`, "success");
+      await checkAuthStatus();
+      selectedEmailId = null;
+      await loadAllData(false);
+      await loadSettings();
+    } else {
+      showToast("Google sign in error", "error");
+    }
+  } catch (e) {
+    showToast("Google Sign-In error: " + e.message, "error");
+  } finally {
+    if (btnText) btnText.textContent = "Continue with Google";
+  }
+}
+
+async function handleSignOutOrOpen() {
+  const token = localStorage.getItem("automail_token");
+  if (token) {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch (e) {}
+    localStorage.removeItem("automail_token");
+    localStorage.setItem("automail_user_id", "default");
+    showToast("Signed out successfully. Switched to Default Account.", "info");
+    await checkAuthStatus();
+    selectedEmailId = null;
+    await loadAllData(false);
+    await loadSettings();
+  } else {
+    openAuthModal("login");
+  }
 }

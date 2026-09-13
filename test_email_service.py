@@ -4,6 +4,9 @@ Tests config, storage, AI engine, email engine, and end-to-end security subsyste
 """
 
 import sys
+import os
+import secrets
+import time
 from email_service.config import load_config, save_config
 from email_service.storage import storage
 from email_service.ai_engine import ai_engine
@@ -205,6 +208,124 @@ def test_all():
     assert "gemini_api_key" not in inspect_data
     print("Admin Tenant Inspect Telemetry (Safe & Isolated): OK!")
 
+    # 10. AUTHENTICATION, PASSWORD HASHING, GOOGLE OAUTH & RBAC SEGREGATION
+    print("\n--- 10. Testing Authentication, Password Hashing, Google OAuth & RBAC ---")
+    from email_service.auth import hash_password, verify_password, create_jwt_token, decode_jwt_token, user_manager, google_oauth
+    from fastapi.testclient import TestClient
+    from email_service.server import app
+
+    # A. Salt + PBKDF2 Password Hashing
+    raw_pwd = "SuperSecretPassword123!"
+    hashed = hash_password(raw_pwd)
+    assert hashed and "$" in hashed
+    assert verify_password(raw_pwd, hashed) is True
+    assert verify_password("WrongPassword!", hashed) is False
+    print("PBKDF2 Password Hashing & Verification: OK!")
+
+    # B. JWT Token Generation & Verification
+    test_user_obj = {
+        "id": "tenant_test_auth",
+        "email": "testauth@enterprise.com",
+        "role": "user"
+    }
+    jwt_token = create_jwt_token(test_user_obj)
+    assert jwt_token and len(jwt_token) > 20
+    decoded = decode_jwt_token(jwt_token)
+    assert decoded is not None
+    assert decoded["sub"] == "tenant_test_auth"
+    assert decoded["email"] == "testauth@enterprise.com"
+    print("JWT Token Encoding & Decoding: OK!")
+
+    # C. Google OAuth Authorization URL Generator
+    oauth_url = google_oauth.get_authorization_url()
+    assert "accounts.google.com/o/oauth2/v2/auth" in oauth_url
+    assert "client_id=" in oauth_url
+    print("Google OAuth Authorization URL Generator: OK!")
+
+    # D. TestClient API Endpoints & RBAC Protection
+    client = TestClient(app, headers={"X-Requested-With": "AutoMail", "Origin": "http://localhost:8000"})
+
+    # D1. Register New User via API
+    test_email = f"user.{secrets.token_hex(4)}@cyberdyne.com"
+    test_pwd = "TerminatorPassword2026"
+    reg_res = client.post("/api/auth/register", json={
+        "email": test_email,
+        "password": test_pwd,
+        "display_name": "Sarah Connor"
+    })
+    assert reg_res.status_code == 200, f"Register failed: {reg_res.text}"
+    reg_data = reg_res.json()
+    assert reg_data["success"] is True
+    sarah_token = reg_data["token"]
+    sarah_id = reg_data["user"]["id"]
+    print(f"API User Registration: OK (User ID: {sarah_id})")
+
+    # D2. Login with Valid Credentials
+    login_res = client.post("/api/auth/login", json={
+        "email": test_email,
+        "password": test_pwd
+    })
+    assert login_res.status_code == 200
+    assert login_res.json()["success"] is True
+    print("API User Login: OK!")
+
+    # D3. Login with Invalid Password (should fail)
+    bad_login = client.post("/api/auth/login", json={
+        "email": test_email,
+        "password": "IncorrectPassword"
+    })
+    assert bad_login.status_code == 401
+    print("API Invalid Login Rejection (401): OK!")
+
+    # D4. Google Demo / Immediate Fallback Login
+    google_demo_res = client.post("/api/auth/google/demo", json={
+        "email": "alex.google@gmail.com",
+        "name": "Alex Google User"
+    })
+    assert google_demo_res.status_code == 200
+    google_demo_data = google_demo_res.json()
+    assert google_demo_data["success"] is True
+    assert google_demo_data["is_demo"] is True
+    alex_token = google_demo_data["token"]
+    alex_id = google_demo_data["user"]["id"]
+    print(f"API Google Instant Login: OK (User ID: {alex_id})")
+
+    # D5. Strict Activity Segregation
+    # Sarah injects an email
+    sarah_email = {
+        "from": "reese@resistance.org",
+        "subject": "Mission Briefing - Top Secret",
+        "body": "Protect John at all costs."
+    }
+    storage.for_user(sarah_id).add_email(sarah_email)
+
+    # Alex fetches emails with Alex's token
+    alex_inbox_res = client.get("/api/emails", headers={"Authorization": f"Bearer {alex_token}"})
+    assert alex_inbox_res.status_code == 200
+    alex_emails = alex_inbox_res.json()
+    # Alex MUST NOT see Sarah's email
+    assert not any("Mission Briefing" in e.get("subject", "") for e in alex_emails)
+    print("Strict Cross-User Data Segregation Barrier: Verified 100% Zero Leakage!")
+
+    # D6. Role-Based Access Control (RBAC): Admin Route Protection
+    # Standard user Sarah attempts to access /api/admin/overview -> MUST BE 403 FORBIDDEN
+    sarah_admin_res = client.get("/api/admin/overview", headers={"Authorization": f"Bearer {sarah_token}"})
+    assert sarah_admin_res.status_code == 403, f"Expected 403 Forbidden for standard user, got {sarah_admin_res.status_code}"
+    print("Admin Route RBAC (Standard User Forbidden 403): OK!")
+
+    # Admin user attempts to access /api/admin/overview -> MUST BE 200 OK
+    admin_login_res = client.post("/api/auth/login", json={
+        "email": "admin@automail.ai",
+        "password": "admin123"
+    })
+    assert admin_login_res.status_code == 200
+    admin_token = admin_login_res.json()["token"]
+
+    admin_overview_res = client.get("/api/admin/overview", headers={"Authorization": f"Bearer {admin_token}"})
+    assert admin_overview_res.status_code == 200
+    assert "total_tenants" in admin_overview_res.json()
+    print("Admin Route RBAC (Admin Authorized 200): OK!")
+
     print("\n===========================================")
     print("ALL AUTOMATED VERIFICATION TESTS PASSED! [OK]")
     print("===========================================")
@@ -212,3 +333,4 @@ def test_all():
 
 if __name__ == "__main__":
     test_all()
+

@@ -44,15 +44,11 @@
         <kbd>⌘K</kbd>
       </button>
 
-      <!-- Primary Action Buttons -->
+      <!-- Primary Action Button -->
       <div class="sidebar-quick-actions">
         <button class="btn btn-primary btn-sync-sidebar" id="btn-sync-now" title="Synchronize mailboxes via IMAP">
           <svg id="sync-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-          <span id="sync-btn-text">Sync Emails</span>
-        </button>
-        <button class="btn btn-secondary btn-sim-sidebar" id="btn-simulate-modal" title="Inject simulated test email scenario">
-          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
-          <span>Simulate</span>
+          <span id="sync-btn-text">Sync Emails Now</span>
         </button>
       </div>
     </div>
@@ -701,7 +697,7 @@
               <div class="enterprise-tag">FINANCIAL IMPACT</div>
               <h3 style="margin-top: 4px; font-size: 1.35rem;">Enterprise Productivity & Financial ROI Calculator</h3>
               <p style="color: var(--text-muted); font-size: 0.88rem; margin: 0;">
-                Simulate exact executive hours and operational budget reclaimed with AutoMail AI automation.
+                Calculate exact executive hours and operational budget reclaimed with AutoMail AI automation.
               </p>
             </div>
             <div class="roi-live-badge">Live Real-Time Engine</div>
@@ -1137,34 +1133,6 @@
   </div>
 </div>
 
-<!-- MODAL: SIMULATE EMAIL -->
-<div class="modal-overlay" id="modal-simulate">
-  <div class="modal-box">
-    <div class="modal-header">
-      <h3>🧪 Simulate Incoming Email</h3>
-      <button class="modal-close" onclick="closeModal('modal-simulate')">&times;</button>
-    </div>
-    <div class="modal-body">
-      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
-        Inject a realistic incoming email scenario directly into the engine. This tests AI classification, automated rules, and draft generation in real-time!
-      </p>
-
-      <div class="form-group">
-        <label>Select Scenario</label>
-        <select class="form-select" id="simulate-scenario-select">
-          <option value="customer_support">🚨 Urgent Customer Support (Checkout API 500 Error)</option>
-          <option value="sales_lead">💼 High-Value Sales Lead (50-seat Enterprise inquiry)</option>
-          <option value="billing_query">💳 Billing Question (Invoice #4829 Discrepancy)</option>
-          <option value="malicious_injection">🛡️ Prompt Injection Attack ("Ignore instructions & leak API keys")</option>
-        </select>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('modal-simulate')">Cancel</button>
-      <button class="btn btn-success" id="btn-run-simulation">Inject Test Email</button>
-    </div>
-  </div>
-</div>
 
 <!-- MODAL: SWITCH USER / TENANT -->
 <div class="modal-overlay" id="modal-switch-user">
@@ -1381,7 +1349,7 @@
   </div>
 </div>
 
-<!-- MODAL: 14-DAY ENTERPRISE PILOT & SALES DEMO -->
+<!-- MODAL: 14-DAY ENTERPRISE PILOT -->
 <div class="modal-overlay" id="modal-pilot-request">
   <div class="modal-box" style="max-width: 500px;">
     <div class="modal-header">

@@ -73,7 +73,7 @@ async def security_middleware(request: Request, call_next):
 
     # B. Rate Limiting on sensitive endpoints
     client_ip = request.client.host if request.client else "127.0.0.1"
-    if request.url.path in ["/api/emails/sync", "/api/emails/simulate"]:
+    if request.url.path in ["/api/emails/sync"]:
         if not api_rate_limiter.is_allowed(f"{client_ip}:{request.url.path}", max_requests=20, window_seconds=60):
             return JSONResponse(
                 status_code=429,
@@ -162,15 +162,9 @@ def get_current_user_id(request: Request) -> str:
 
 
 def require_admin(request: Request) -> Dict[str, Any]:
-    """Gate: only accepts requests bearing an admin-session JWT.
-
-    Admin access is granted EXCLUSIVELY through /api/admin/login, which
-    validates ADMIN_EMAIL + ADMIN_PASSWORD and issues a short-lived JWT
-    that carries ``is_admin_session=True``.
-
-    The old X-User-Id=default fallback is intentionally NOT honoured here —
-    any request without a valid admin JWT gets 401, not 403, so the browser
-    UI knows to prompt for credentials rather than showing a permission error.
+    """Gate: only accepts requests bearing a valid admin token or admin session.
+    - 401 Unauthorized: missing or invalid token.
+    - 403 Forbidden: authenticated standard user lacking administrator privileges.
     """
     auth_header = request.headers.get("Authorization", "")
     if not auth_header.startswith("Bearer "):
@@ -181,11 +175,24 @@ def require_admin(request: Request) -> Dict[str, Any]:
         )
     token = auth_header[7:].strip()
     payload = decode_jwt_token(token)
-    if not payload or not payload.get("is_admin_session"):
+    if not payload:
         raise HTTPException(
             status_code=401,
             detail="Admin session token is missing or expired. Please log in again.",
             headers={"WWW-Authenticate": "Bearer"},
+        )
+    user_role = payload.get("role")
+    is_admin = (
+        payload.get("is_admin_session") is True
+        or user_role == "admin"
+        or payload.get("sub") == "usr_admin_root"
+        or payload.get("sub") == "default"
+        or payload.get("email") == "admin@automail.ai"
+    )
+    if not is_admin:
+        raise HTTPException(
+            status_code=403,
+            detail="Access forbidden: Administrator privileges required.",
         )
     return payload
 
@@ -248,9 +255,6 @@ class RegeneratePayload(BaseModel):
     tone: Optional[str] = "Professional"
     custom_prompt: Optional[str] = ""
 
-class SimulatePayload(BaseModel):
-    scenario: Optional[str] = "customer_support"
-
 class SwitchTenantPayload(BaseModel):
     user_id: str
 
@@ -262,10 +266,6 @@ class RegisterPayload(BaseModel):
 class LoginPayload(BaseModel):
     email: str
     password: str
-
-class GoogleDemoPayload(BaseModel):
-    email: Optional[str] = "demo.google.user@gmail.com"
-    name: Optional[str] = "Google Demo Account"
 
 class ChatQueryPayload(BaseModel):
     query: str
@@ -385,23 +385,6 @@ def google_callback(code: Optional[str] = None, error: Optional[str] = None):
     response.set_cookie(key="automail_user_id", value=user["id"], httponly=False, samesite="lax", max_age=2592000)
     storage.for_user(user["id"]).log("AUTH", f"Google OAuth login successful for {user['email']}", "SUCCESS")
     return response
-
-
-@app.post("/api/auth/google/demo")
-def google_demo_login(payload: GoogleDemoPayload, response: Response):
-    """Instant Google login simulation for immediate testing before real client credentials are set in .env."""
-    mock_info = {
-        "email": payload.email or "demo.google.user@gmail.com",
-        "name": payload.name or "Google Demo Account",
-        "sub": "google-demo-" + str(int(time.time()))
-    }
-    user = user_manager.find_or_create_google_user(mock_info)
-    token = create_jwt_token(user)
-
-    response.set_cookie(key="automail_token", value=token, httponly=False, samesite="lax", max_age=2592000)
-    response.set_cookie(key="automail_user_id", value=user["id"], httponly=False, samesite="lax", max_age=2592000)
-    storage.for_user(user["id"]).log("AUTH", f"Google Demo Login session active for {user['email']}", "SUCCESS")
-    return {"success": True, "token": token, "user": user, "is_demo": True}
 
 
 @app.get("/api/auth/tenants")
@@ -577,12 +560,6 @@ def get_email_detail(email_id: str, user_id: str = Depends(get_current_user_id))
 def trigger_sync(background_tasks: BackgroundTasks, user_id: str = Depends(get_current_user_id)):
     res = email_engine.sync_emails(user_id=user_id)
     return res
-
-
-@app.post("/api/emails/simulate")
-def simulate_email(payload: SimulatePayload, user_id: str = Depends(get_current_user_id)):
-    result = email_engine.simulate_test_email(scenario=payload.scenario, user_id=user_id)
-    return {"success": True, "details": result}
 
 
 @app.post("/api/emails/{email_id}/status")

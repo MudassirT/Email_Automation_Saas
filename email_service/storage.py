@@ -69,101 +69,6 @@ DEFAULT_RULES = [
     }
 ]
 
-INITIAL_SAMPLE_EMAILS = [
-    {
-        "id": "msg_sample_01",
-        "uid": "1001",
-        "from": "Elena Rostova <elena.rostova@acmepartners.com>",
-        "sender_name": "Elena Rostova",
-        "sender_organization": "Acme Partners",
-        "to": "you@domain.com",
-        "subject": "Urgent: Contract clarification for Q4 Partnership agreement",
-        "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "snippet": "Hi, we are reviewing Section 4.2 of the partnership contract regarding API rate limits and need...",
-        "body": "Hi there,\n\nWe are reviewing Section 4.2 of the partnership contract regarding API rate limits and service tier uptime guarantees.\nCould you clarify if enterprise support includes 24/7 dedicated escalation channels?\n\nWe would appreciate a response by tomorrow morning so we can finalize signatures.\n\nBest regards,\nElena Rostova\nVP of Partnerships, Acme Partners",
-        "category": "Urgent Action",
-        "priority": "Urgent",
-        "sentiment": "Neutral",
-        "summary": "Elena asks for urgent clarification on contract Section 4.2 regarding enterprise 24/7 escalation before signing tomorrow.",
-        "compressed_summary": "Elena Rostova (Acme Partners) needs clarification on whether enterprise support in Section 4.2 includes 24/7 dedicated escalation before signing tomorrow morning.",
-        "core_intent": "Contract SLA Clarification",
-        "action_needed": True,
-        "status": "unread",
-        "draft_id": "draft_sample_01",
-        "tasks": [
-            "Clarify if enterprise support includes 24/7 dedicated escalation channels",
-            "Confirm SLA response time guarantee",
-            "Provide response before tomorrow morning for contract signing"
-        ],
-        "ai_automated_actions": [
-            "Ingested & analyzed by AI engine",
-            "Extracted 3 action items for owner",
-            "Auto-drafted response confirming Section 4.2 SLA",
-            "Queued in Approval Center for 1-click execution"
-        ],
-        "created_at": datetime.now().isoformat()
-    },
-    {
-        "id": "msg_sample_02",
-        "uid": "1002",
-        "from": "Marcus Vance <mvance@quantumcloud.io>",
-        "sender_name": "Marcus Vance",
-        "sender_organization": "QuantumCloud",
-        "to": "you@domain.com",
-        "subject": "Demo Request: Exploring AI Automation for our Operations",
-        "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "snippet": "Hello! I saw your recent updates on autonomous email automation and workflow assistants...",
-        "body": "Hello,\n\nI saw your recent updates on autonomous email automation and workflow assistants. Our team handles around 400 incoming customer inquiries every week, and we'd love to schedule a 20-minute product demo.\n\nDo you have availability this Thursday or Friday afternoon?\n\nThanks,\nMarcus Vance\nHead of Operations, QuantumCloud",
-        "category": "Sales Inquiry",
-        "priority": "High",
-        "sentiment": "Positive",
-        "summary": "Marcus Vance requests a 20-minute demo for email automation this Thursday or Friday afternoon.",
-        "compressed_summary": "Marcus Vance (QuantumCloud) is requesting a 20-minute product demo for AI email automation with availability on Thursday or Friday afternoon.",
-        "core_intent": "Product Demo Request",
-        "action_needed": True,
-        "status": "unread",
-        "draft_id": "draft_sample_02",
-        "tasks": [
-            "Schedule 20-minute email automation product demo",
-            "Provide team availability for Thursday or Friday afternoon"
-        ],
-        "ai_automated_actions": [
-            "Ingested & analyzed by AI engine",
-            "Identified sales opportunity for 400+ weekly inquiries",
-            "Drafted calendar availability response",
-            "Queued for owner review"
-        ],
-        "created_at": datetime.now().isoformat()
-    }
-]
-
-INITIAL_SAMPLE_DRAFTS = [
-    {
-        "id": "draft_sample_01",
-        "email_id": "msg_sample_01",
-        "recipient": "Elena Rostova <elena.rostova@acmepartners.com>",
-        "subject": "Re: Urgent: Contract clarification for Q4 Partnership agreement",
-        "body": "Dear Elena,\n\nThank you for reaching out. Yes, Section 4.2 enterprise support specifically guarantees 24/7 dedicated escalation channels with a 30-minute priority response SLA.\n\nI have confirmed this with our legal and technical teams. Please let me know if you need any supplemental addendums prior to signing.\n\nBest regards,\nExecutive Team",
-        "tone": "Professional",
-        "status": "pending",
-        "created_at": datetime.now().isoformat(),
-        "reviewed_at": None,
-        "sent_at": None
-    },
-    {
-        "id": "draft_sample_02",
-        "email_id": "msg_sample_02",
-        "recipient": "Marcus Vance <mvance@quantumcloud.io>",
-        "subject": "Re: Demo Request: Exploring AI Automation for our Operations",
-        "body": "Hi Marcus,\n\nThank you for getting in touch! We'd be thrilled to demonstrate how our email automation service can streamline your 400+ weekly inquiries.\n\nThursday at 2:00 PM EST or Friday at 11:00 AM EST works great on our end. Would either of those slots suit your team?\n\nLooking forward to speaking soon.\n\nWarm regards,\nSales & Solutions Team",
-        "tone": "Friendly",
-        "status": "pending",
-        "created_at": datetime.now().isoformat(),
-        "reviewed_at": None,
-        "sent_at": None
-    }
-]
-
 
 class StorageManager:
     def __init__(self, user_id: str = "default"):
@@ -188,49 +93,23 @@ class StorageManager:
         self._load()
 
     def _get_initial_state(self) -> Dict[str, Any]:
-        if self.user_id == "default":
-            return {
-                "emails": {e["id"]: e for e in INITIAL_SAMPLE_EMAILS},
-                "drafts": {d["id"]: d for d in INITIAL_SAMPLE_DRAFTS},
-                "rules": DEFAULT_RULES,
-                "sent_emails": [],
-                "logs": [
-                    {
-                        "id": str(uuid.uuid4())[:8],
-                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        "level": "SUCCESS",
-                        "category": "SYSTEM",
-                        "message": "Email Automation Service initialized successfully."
-                    },
-                    {
-                        "id": str(uuid.uuid4())[:8],
-                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        "level": "INFO",
-                        "category": "AI",
-                        "message": "Loaded 2 pending sample emails with AI-drafted responses ready for review."
-                    }
-                ],
-                "last_sync_time": datetime.now().isoformat(),
-                "last_uid": 1002
-            }
-        else:
-            return {
-                "emails": {},
-                "drafts": {},
-                "rules": [dict(r) for r in DEFAULT_RULES],
-                "sent_emails": [],
-                "logs": [
-                    {
-                        "id": str(uuid.uuid4())[:8],
-                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        "level": "SUCCESS",
-                        "category": "SECURITY",
-                        "message": f"Secure tenant workspace for '{self.user_id}' initialized with zero cross-user leakage."
-                    }
-                ],
-                "last_sync_time": "Never",
-                "last_uid": 0
-            }
+        return {
+            "emails": {},
+            "drafts": {},
+            "rules": [dict(r) for r in DEFAULT_RULES],
+            "sent_emails": [],
+            "logs": [
+                {
+                    "id": str(uuid.uuid4())[:8],
+                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "level": "SUCCESS",
+                    "category": "SYSTEM",
+                    "message": f"AutoMail workspace for '{self.user_id}' initialized. Ready for email synchronization."
+                }
+            ],
+            "last_sync_time": "Never",
+            "last_uid": 0
+        }
 
     def _load(self):
         with _lock:
@@ -241,15 +120,29 @@ class StorageManager:
                 try:
                     with open(self.state_file, "r", encoding="utf-8") as f:
                         self.state = json.load(f)
+                    self._last_mtime = self.state_file.stat().st_mtime
                 except Exception as e:
                     print(f"Error reading state file for user '{self.user_id}': {e}. Reinitializing.")
                     self.state = self._get_initial_state()
                     self._save_unlocked()
 
+    def _reload_if_changed(self):
+        try:
+            if self.state_file.exists():
+                mtime = self.state_file.stat().st_mtime
+                if getattr(self, "_last_mtime", 0) < mtime:
+                    with open(self.state_file, "r", encoding="utf-8") as f:
+                        self.state = json.load(f)
+                    self._last_mtime = mtime
+        except Exception:
+            pass
+
     def _save_unlocked(self):
         try:
             with open(self.state_file, "w", encoding="utf-8") as f:
                 json.dump(self.state, f, indent=2, ensure_ascii=False)
+            if self.state_file.exists():
+                self._last_mtime = self.state_file.stat().st_mtime
         except Exception as e:
             print(f"Error saving state for user '{self.user_id}': {e}")
 
@@ -260,6 +153,7 @@ class StorageManager:
     # --- EMAILS ---
     def get_emails(self, category: Optional[str] = None, status: Optional[str] = None) -> List[Dict[str, Any]]:
         with _lock:
+            self._reload_if_changed()
             emails = list(self.state.get("emails", {}).values())
             # Sort newest first
             emails.sort(key=lambda x: x.get("created_at", ""), reverse=True)
@@ -271,6 +165,7 @@ class StorageManager:
 
     def get_email(self, email_id: str) -> Optional[Dict[str, Any]]:
         with _lock:
+            self._reload_if_changed()
             return self.state.get("emails", {}).get(email_id)
 
     def add_email(self, email_data: Dict[str, Any]) -> str:
@@ -295,6 +190,7 @@ class StorageManager:
     # --- DRAFTS & APPROVALS ---
     def get_drafts(self, status: Optional[str] = None) -> List[Dict[str, Any]]:
         with _lock:
+            self._reload_if_changed()
             drafts = list(self.state.get("drafts", {}).values())
             drafts.sort(key=lambda x: x.get("created_at", ""), reverse=True)
             if status:
@@ -303,6 +199,7 @@ class StorageManager:
 
     def get_draft(self, draft_id: str) -> Optional[Dict[str, Any]]:
         with _lock:
+            self._reload_if_changed()
             return self.state.get("drafts", {}).get(draft_id)
 
     def add_draft(self, draft_data: Dict[str, Any]) -> str:
@@ -405,6 +302,7 @@ class StorageManager:
     # --- STATS ---
     def get_stats(self) -> Dict[str, Any]:
         with _lock:
+            self._reload_if_changed()
             emails = list(self.state.get("emails", {}).values())
             drafts = list(self.state.get("drafts", {}).values())
             sent = self.state.get("sent_emails", [])
@@ -642,39 +540,12 @@ class StorageManager:
                 "members": [
                     {
                         "id": "mbr_owner_1",
-                        "name": "Current User" if self.user_id != "default" else "Admin Account",
-                        "email": f"{self.user_id}@automail.ai" if self.user_id != "default" else "admin@automail.ai",
+                        "name": "Admin Account" if self.user_id == "default" else self.user_id,
+                        "email": "admin@automail.ai" if self.user_id == "default" else f"{self.user_id}@automail.ai",
                         "role": "Enterprise Owner",
                         "status": "Active",
                         "mfa_enabled": True,
                         "last_active": "Just now"
-                    },
-                    {
-                        "id": "mbr_sec_2",
-                        "name": "Elena Rostova",
-                        "email": "elena.sec@enterprise.com",
-                        "role": "Security Officer",
-                        "status": "Active",
-                        "mfa_enabled": True,
-                        "last_active": "12 mins ago"
-                    },
-                    {
-                        "id": "mbr_ops_3",
-                        "name": "Marcus Vance",
-                        "email": "m.vance@enterprise.com",
-                        "role": "Operations Admin",
-                        "status": "Active",
-                        "mfa_enabled": True,
-                        "last_active": "1 hour ago"
-                    },
-                    {
-                        "id": "mbr_audit_4",
-                        "name": "Sarah Lin",
-                        "email": "s.lin@audit-compliance.org",
-                        "role": "Compliance Auditor",
-                        "status": "Active",
-                        "mfa_enabled": True,
-                        "last_active": "Yesterday"
                     }
                 ]
             })

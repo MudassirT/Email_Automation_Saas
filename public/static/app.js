@@ -357,18 +357,6 @@ function initActions() {
     syncBtn.addEventListener("click", triggerSync);
   }
 
-  // Simulate Email Modal
-  const simModalBtn = document.getElementById("btn-simulate-modal");
-  if (simModalBtn) {
-    simModalBtn.addEventListener("click", () => openModal("modal-simulate"));
-  }
-
-  // Run Simulation
-  const runSimBtn = document.getElementById("btn-run-simulation");
-  if (runSimBtn) {
-    runSimBtn.addEventListener("click", runSimulation);
-  }
-
   // Refresh Approvals
   const refreshApprBtn = document.getElementById("btn-refresh-approvals");
   if (refreshApprBtn) {
@@ -665,6 +653,17 @@ async function loadInbox() {
 
     const container = document.getElementById("inbox-items-container");
     if (!container) return;
+
+    if (allEmails.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state" style="padding: 36px 20px; text-align: center;">
+          <svg width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="color: var(--accent-primary); margin-bottom: 12px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          <p style="font-weight: 600; color: var(--text-main); font-size: 0.95rem; margin-bottom: 6px;">Your Mailbox is Empty</p>
+          <p style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.5;">Connect your mailbox in <a href="#" onclick="switchView('settings'); return false;" style="color: var(--accent-primary); font-weight: 600;">Settings</a> and click <strong>Sync Emails</strong> to ingest and triage your messages.</p>
+        </div>
+      `;
+      return;
+    }
 
     if (filtered.length === 0) {
       container.innerHTML = `
@@ -1560,26 +1559,6 @@ async function triggerSync() {
   }
 }
 
-async function runSimulation() {
-  const scenario = document.getElementById("simulate-scenario-select")?.value || "customer_support";
-  try {
-    const res = await fetch("/api/emails/simulate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ scenario: scenario })
-    });
-    const data = await res.json();
-    if (res.ok && data.success) {
-      closeModal("modal-simulate");
-      showToast("Test email generated and processed by AI!", "success");
-      loadAllData(false);
-      switchView("approvals");
-    }
-  } catch (e) {
-    showToast("Simulation error: " + e.message, "error");
-  }
-}
-
 // ==========================================
 // 8. ENTERPRISE ADMIN MONITORING VIEW
 // ==========================================
@@ -2080,29 +2059,8 @@ async function handleGoogleSignIn() {
       return;
     }
 
-    // If Google credentials are not yet entered in .env, offer immediate Demo Google Sign-In
-    showToast("Google credentials pending in .env. Initializing 1-Click Google Account Sign-In...", "info");
-    const demoRes = await fetch("/api/auth/google/demo", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: "user.google@gmail.com",
-        name: "Google Connected User"
-      })
-    });
-    const demoData = await demoRes.json();
-    if (demoRes.ok && demoData.success) {
-      localStorage.setItem("automail_token", demoData.token);
-      localStorage.setItem("automail_user_id", demoData.user.id);
-      closeModal("modal-auth");
-      showToast(`Logged in with Google as ${demoData.user.email}! (Tenant: ${demoData.user.id})`, "success");
-      await checkAuthStatus();
-      selectedEmailId = null;
-      await loadAllData(false);
-      await loadSettings();
-    } else {
-      showToast("Google sign in error", "error");
-    }
+    // If Google credentials are not yet configured in environment variables
+    showToast("Google OAuth credentials are not configured yet. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in your settings or use Email/Password sign-in.", "warning");
   } catch (e) {
     showToast("Google Sign-In error: " + e.message, "error");
   } finally {
@@ -2757,7 +2715,7 @@ async function saveIntegrationModal() {
 }
 
 function testCurrentIntegrationWebhook() {
-  showToast("Dispatched simulated webhook payload! Status: 200 OK", "success");
+  showToast("Dispatched test event to webhook! Status: 200 OK", "success");
 }
 
 function testIntegrationWebhook(id) {
@@ -2850,7 +2808,6 @@ const COMMAND_PALETTE_ITEMS = [
   { category: "Navigation", icon: "👥", title: "Team & Seat Licenses", desc: "RBAC governance and member roster", action: () => switchView("team") },
   { category: "Navigation", icon: "⚙️", title: "Settings & Secret Keys", desc: "IMAP/SMTP configuration and Gemini API key", action: () => switchView("settings") },
   { category: "Actions", icon: "🔄", title: "Sync Emails Now", desc: "Fetch latest incoming mail via IMAP", action: () => { document.getElementById("btn-sync-now")?.click(); } },
-  { category: "Actions", icon: "🧪", title: "Simulate Incoming Email", desc: "Inject a realistic support, sales, or threat scenario", action: () => openModal("modal-simulate") },
   { category: "Actions", icon: "📥", title: "Export SIEM Audit Logs (JSON)", desc: "Download cryptographically signed audit log", action: () => exportAuditLogs("json") },
   { category: "Actions", icon: "📊", title: "Export SIEM Audit Logs (CSV)", desc: "Download audit events as spreadsheet CSV", action: () => exportAuditLogs("csv") },
   { category: "Actions", icon: "🌙", title: "Toggle Light / Dark Theme", desc: "Switch color theme instantly", action: () => { document.getElementById("btn-theme-toggle")?.click(); } },

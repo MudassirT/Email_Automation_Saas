@@ -3,7 +3,7 @@ Authentication Subsystem for Email Automation SaaS.
 Provides:
 1. User registration & authentication with PBKDF2-HMAC-SHA256 password hashing.
 2. Signed JWT session tokens with 30-day persistence.
-3. Google OAuth 2.0 Client with .env credential loading and demo fallback.
+3. Google OAuth 2.0 Client with .env credential loading.
 4. Automatic provisioning and binding to isolated tenant partitions.
 5. Role-Based Access Control (Admin vs Standard User).
 """
@@ -397,8 +397,8 @@ class GoogleOAuthClient:
         if not cls.is_configured():
             return {
                 "configured": False,
-                "message": "Google OAuth is awaiting your GOOGLE_CLIENT_ID in .env. You can also use Instant Google Demo login.",
-                "demo_login_available": True,
+                "message": "Google OAuth credentials not configured in .env. Please configure GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET or sign in with your email and password.",
+                "demo_login_available": False,
                 "callback_url": callback_url
             }
 

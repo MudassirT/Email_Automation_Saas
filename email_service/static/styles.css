@@ -286,25 +286,17 @@ body {
 
 /* Primary Quick Actions */
 .sidebar-quick-actions {
-  display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
 }
 
 .btn-sync-sidebar {
-  padding: 7px 10px;
-  font-size: 0.78rem;
+  padding: 9px 14px;
+  font-size: 0.82rem;
   font-weight: 600;
   justify-content: center;
   border-radius: var(--radius-md);
-}
-
-.btn-sim-sidebar {
-  padding: 7px 10px;
-  font-size: 0.78rem;
-  font-weight: 500;
-  justify-content: center;
-  border-radius: var(--radius-md);
+  width: 100%;
 }
 
 /* Nav Sections & Items */

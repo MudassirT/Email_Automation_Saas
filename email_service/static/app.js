@@ -830,7 +830,7 @@ async function selectEmail(id) {
           ${draft && draft.status === 'pending' ? `
             <div style="margin-top: 12px; display: flex; gap: 10px; align-items: center; justify-content: space-between; background: rgba(99, 102, 241, 0.08); padding: 12px 16px; border-radius: var(--radius-md); border: 1px dashed var(--border-active); flex-wrap: wrap;">
               <div>
-                <div style="font-weight: 600; font-size: 0.88rem; color: #fff;">🤖 Ready for One-Click Send</div>
+                <div style="font-weight: 600; font-size: 0.88rem; color: var(--text-main);">🤖 Ready for One-Click Send</div>
                 <div style="font-size: 0.76rem; color: var(--text-muted);">AI drafted a polite response answering all ${tasks.length} item(s).</div>
               </div>
               <button class="btn btn-primary btn-ai-execute" onclick="approveDraft('${draft.id}')">
@@ -842,27 +842,36 @@ async function selectEmail(id) {
       </div>
 
       <!-- 2. ORIGINAL EMAIL THREAD -->
-      <div class="viewer-header">
-        <div class="viewer-title">${escapeHtml(email.subject)}</div>
-        <div class="viewer-meta">
-          <div><strong>From:</strong> ${escapeHtml(email.from)}</div>
-          <div>${escapeHtml(email.date)}</div>
+      <div class="email-body-card">
+        <div class="email-body-header">
+          <div class="email-body-header-left">
+            <div class="email-body-tag">INCOMING MESSAGE</div>
+            <h3 class="email-body-subject">${escapeHtml(email.subject)}</h3>
+          </div>
+          <div class="email-body-date">${escapeHtml(email.date)}</div>
         </div>
+        <div class="email-body-sender-bar">
+          <div class="sender-info-pill">
+            <span class="sender-label">From:</span>
+            <span class="sender-val">${escapeHtml(email.from)}</span>
+          </div>
+          <div class="sender-security-badge ${email.status === 'quarantined' || (email.ai_security && email.ai_security.injection_attempt) ? 'security-flagged' : 'security-verified'}">
+            ${email.status === 'quarantined' || (email.ai_security && email.ai_security.injection_attempt) ? '🛡️ Threat Quarantined' : '✓ Verified Inbound'}
+          </div>
+        </div>
+        <div class="email-body-content">${escapeHtml(email.body)}</div>
       </div>
-
-      <!-- Full Email Body -->
-      <div class="viewer-body">${escapeHtml(email.body)}</div>
 
       <!-- 3. AI GENERATED RESPONSE DRAFT (IF EXISTS) -->
       ${draft ? `
-        <div style="margin-top: 24px; background: rgba(99, 102, 241, 0.08); border: 1px solid var(--border-active); border-radius: var(--radius-md); padding: 18px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <span style="font-weight: 600; font-size: 0.9rem; color: #fff;">✨ AI Draft Reply (${escapeHtml(draft.tone || 'Friendly')})</span>
+        <div class="email-draft-card">
+          <div class="email-draft-header">
+            <span class="email-draft-title">✨ AI Draft Reply (${escapeHtml(draft.tone || 'Friendly')})</span>
             <span class="badge ${draft.status === 'sent' ? 'badge-success' : 'badge-high'}">${escapeHtml(draft.status === 'sent' ? 'SENT' : 'WAITING FOR YOUR OK')}</span>
           </div>
-          <div style="font-size: 0.85rem; color: #cbd5e1; white-space: pre-wrap; line-height: 1.6; margin-bottom: 14px;">${escapeHtml(draft.body)}</div>
+          <div class="email-draft-body">${escapeHtml(draft.body)}</div>
           ${draft.status === 'pending' ? `
-            <div style="display: flex; gap: 10px;">
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
               <button class="btn btn-success btn-sm" onclick="approveDraft('${draft.id}')">✅ Looks Good, Send It!</button>
               <button class="btn btn-secondary btn-sm" onclick="switchView('approvals')">👀 Review in Waiting Queue</button>
             </div>
@@ -918,7 +927,7 @@ async function loadApprovals() {
             <div class="approval-info">
               <h3>${escapeHtml(draft.subject)}</h3>
               <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 4px;">
-                To: <strong style="color: #fff;">${escapeHtml(draft.recipient)}</strong> • 🏢 ${escapeHtml(senderOrg)}
+                To: <strong style="color: var(--text-main);">${escapeHtml(draft.recipient)}</strong> • 🏢 ${escapeHtml(senderOrg)}
               </div>
             </div>
             <div style="display: flex; gap: 8px; align-items: center;">
@@ -1082,26 +1091,39 @@ async function loadRules() {
     container.innerHTML = rules.map(rule => `
       <div class="rule-card">
         <div class="rule-top">
-          <div class="rule-name">${escapeHtml(rule.name)}</div>
-          <label class="switch">
+          <div class="rule-name-group">
+            <span class="rule-type-icon">⚡</span>
+            <div class="rule-name">${escapeHtml(rule.name)}</div>
+          </div>
+          <label class="switch" title="Toggle active/inactive">
             <input type="checkbox" ${rule.enabled ? 'checked' : ''} onchange="toggleRule('${rule.id}', this.checked)">
             <span class="slider"></span>
           </label>
         </div>
 
-        <div class="rule-condition-box">
-          IF <span class="rule-tag">${escapeHtml(rule.condition_field)}</span>
-          ${escapeHtml(rule.condition_operator)}
-          "<strong style="color: #fff;">${escapeHtml(rule.condition_value)}</strong>"
+        <div class="rule-condition-flow">
+          <div class="rule-condition-badge">
+            <span class="rule-syntax-label">IF</span>
+            <span class="rule-field-tag">${escapeHtml(rule.condition_field)}</span>
+            <span class="rule-op-tag">${escapeHtml(rule.condition_operator)}</span>
+            <span class="rule-val-tag">"${escapeHtml(rule.condition_value)}"</span>
+          </div>
+          <div class="rule-flow-arrow">↓</div>
+          <div class="rule-action-badge">
+            <span class="rule-syntax-label">THEN</span>
+            <span class="rule-action-tag">${escapeHtml(rule.action)}</span>
+            ${rule.action_param ? `<span class="rule-param-tag">(${escapeHtml(rule.action_param)})</span>` : ''}
+          </div>
         </div>
 
-        <div style="font-size: 0.82rem; color: var(--text-muted);">
-          THEN: <span class="badge badge-category">${escapeHtml(rule.action)}</span>
-          ${rule.action_param ? `<span style="color: #fff; font-size: 0.78rem;">(${escapeHtml(rule.action_param)})</span>` : ''}
-        </div>
-
-        <div style="display: flex; justify-content: flex-end; margin-top: auto;">
-          <button class="btn btn-danger btn-sm" onclick="deleteRule('${rule.id}')">Delete Rule</button>
+        <div class="rule-card-footer">
+          <span class="rule-status-text ${rule.enabled ? 'rule-active' : 'rule-paused'}">
+            ${rule.enabled ? '● Active Rule' : '○ Paused'}
+          </span>
+          <button class="btn-rule-delete" onclick="deleteRule('${rule.id}')" title="Delete this rule">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            <span>Delete</span>
+          </button>
         </div>
       </div>
     `).join("");
@@ -1191,7 +1213,7 @@ async function loadSent() {
 
     tbody.innerHTML = sentList.map(item => `
       <tr>
-        <td style="font-weight: 500; color: #fff;">${escapeHtml(item.to)}</td>
+        <td style="font-weight: 500; color: var(--text-main);">${escapeHtml(item.to)}</td>
         <td>${escapeHtml(item.subject)}</td>
         <td style="color: var(--text-dim);">${escapeHtml(item.sent_at)}</td>
         <td><span style="font-size: 0.78rem; color: var(--accent-secondary);">${escapeHtml(item.method || 'SMTP')}</span></td>
@@ -1716,14 +1738,14 @@ function renderAdminUsersTable(filter = "") {
         </td>
         <td>
           <div style="display: flex; flex-direction: column; gap: 3px;">
-            <span style="font-weight: 500; color: #fff;">${escapeHtml(u.email)}</span>
+            <span style="font-weight: 500; color: var(--text-main);">${escapeHtml(u.email)}</span>
             <div>
               <span class="provider-chip ${providerClass}">${escapeHtml(u.provider)}</span>
             </div>
           </div>
         </td>
         <td>
-          <span style="font-weight: 600; color: #fff;">${u.total_emails}</span>
+          <span style="font-weight: 600; color: var(--text-main);">${u.total_emails}</span>
           <span style="color: var(--text-dim); font-size: 0.72rem;"> msgs</span>
         </td>
         <td>
@@ -1867,7 +1889,7 @@ async function adminInspectUser(userId) {
         <div class="inspect-grid">
           <div class="inspect-metric-box">
             <div class="inspect-metric-label">Connected Email</div>
-            <div style="font-size: 0.85rem; font-weight: 600; color: #fff; word-break: break-all;">${escapeHtml(data.email)}</div>
+            <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-main); word-break: break-all;">${escapeHtml(data.email)}</div>
           </div>
           <div class="inspect-metric-box">
             <div class="inspect-metric-label">Total Ingested</div>
@@ -1896,7 +1918,7 @@ async function adminInspectUser(userId) {
             ${emails.map(e => `
               <div style="padding: 6px 8px; border-bottom: 1px solid var(--border-subtle); font-size: 0.76rem; display: flex; justify-content: space-between; align-items: center;">
                 <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%;">
-                  <strong style="color: #fff;">${escapeHtml(e.subject)}</strong>
+                  <strong style="color: var(--text-main);">${escapeHtml(e.subject)}</strong>
                   <div style="color: var(--text-dim);">${escapeHtml(e.from)}</div>
                 </div>
                 <span class="badge badge-neutral" style="font-size: 0.68rem;">${escapeHtml(e.category || 'General')}</span>

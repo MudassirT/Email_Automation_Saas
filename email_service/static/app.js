@@ -3349,3 +3349,237 @@ function executePaletteItem(title) {
   }
 }
 
+
+/* ═══════════════════════════════════════════════════════════════════
+   SETTINGS WIZARD — 4-Step Email Connection Guide
+   ═══════════════════════════════════════════════════════════════════ */
+
+// Provider data: server config + guide content
+const WIZARD_PROVIDER_DATA = {
+  gmail: {
+    imap: 'imap.gmail.com', imapPort: 993,
+    smtp: 'smtp.gmail.com', smtpPort: 587,
+    step2Title: '🔑 Create a Gmail App Password',
+    subtitle: 'Gmail needs a special <strong>App Password</strong> — not your regular password. Takes 60 seconds!',
+    step2SubTitle: 'Generate a Gmail App Password',
+    step2Desc: 'Go to <strong>App Passwords</strong>, choose <em>"Other (Custom name)"</em>, type <strong>"AutoMail"</strong> and click <strong>Generate</strong>. A 16-character password appears.',
+    step3Desc: 'Google shows a box with a 16-character password like <code class="inline-code">abcd efgh ijkl mnop</code>. <strong>Copy the entire thing</strong> — paste it in Step 3.',
+    linkSecurity: 'https://myaccount.google.com/security',
+    linkAppPw: 'https://myaccount.google.com/apppasswords',
+    tipText: '<strong>Tip:</strong> The App Password is <em>different</em> from your normal Gmail password. Think of it as a special key just for AutoMail — your real password stays safe!',
+  },
+  outlook: {
+    imap: 'outlook.office365.com', imapPort: 993,
+    smtp: 'smtp.office365.com', smtpPort: 587,
+    step2Title: '🔑 Create a Microsoft App Password',
+    subtitle: 'Outlook requires a special <strong>App Password</strong> if you have 2-Factor Authentication enabled.',
+    step2SubTitle: 'Generate a Microsoft App Password',
+    step2Desc: 'Go to <strong>Microsoft Account Security</strong> → <strong>Advanced Security</strong> → <strong>App Passwords</strong>. Create one named <strong>"AutoMail"</strong>.',
+    step3Desc: 'Microsoft shows a 16-character code. <strong>Copy the entire password</strong> — you\'ll paste it in Step 3.',
+    linkSecurity: 'https://account.microsoft.com/security',
+    linkAppPw: 'https://account.microsoft.com/security/app-passwords',
+    tipText: '<strong>Tip:</strong> If you do not have 2FA enabled on your Microsoft account, you can use your regular password instead of an App Password.',
+  },
+  yahoo: {
+    imap: 'imap.mail.yahoo.com', imapPort: 993,
+    smtp: 'smtp.mail.yahoo.com', smtpPort: 587,
+    step2Title: '🔑 Create a Yahoo App Password',
+    subtitle: 'Yahoo requires a special <strong>App Password</strong> for third-party email apps like AutoMail.',
+    step2SubTitle: 'Generate a Yahoo App Password',
+    step2Desc: 'Go to <strong>Yahoo Account Security</strong> → scroll to <strong>App passwords</strong> → select <strong>AutoMail</strong> from the dropdown → click <strong>Generate</strong>.',
+    step3Desc: 'Yahoo shows a 16-character App Password. <strong>Copy it all</strong> and paste it in Step 3.',
+    linkSecurity: 'https://login.yahoo.com/account/security',
+    linkAppPw: 'https://login.yahoo.com/account/security#app-passwords',
+    tipText: '<strong>Tip:</strong> Yahoo App Passwords are only available if you have 2-Step Verification turned on. Make sure to enable it first!',
+  },
+  custom: {
+    imap: '', imapPort: 993,
+    smtp: '', smtpPort: 587,
+    step2Title: '🔑 Custom IMAP / SMTP Setup',
+    subtitle: 'For custom mail servers, you\'ll enter your IMAP and SMTP details in Step 3. Some providers may use regular passwords — check your provider\'s documentation.',
+    step2SubTitle: 'Find Your Server Details',
+    step2Desc: 'Look up your email provider\'s <strong>IMAP</strong> and <strong>SMTP</strong> server addresses and ports. You can usually find these in your provider\'s help center or settings.',
+    step3Desc: 'Enter your <strong>regular password</strong> (or App Password if your provider requires one). The IMAP/SMTP fields in Advanced Settings will be editable for your server details.',
+    linkSecurity: 'https://support.google.com/mail/answer/7126229',
+    linkAppPw: '',
+    tipText: '<strong>Tip:</strong> Contact your email provider\'s support to get the correct IMAP/SMTP settings. Common ports: IMAP=993 (SSL), SMTP=587 (TLS/STARTTLS).',
+  }
+};
+
+let currentWizardProvider = 'gmail';
+let currentWizardStep = 1;
+
+// Navigate to a wizard step
+function wizardGoTo(step) {
+  // Hide all panels
+  for (let i = 1; i <= 4; i++) {
+    const panel = document.getElementById('wiz-panel-' + i);
+    const node  = document.getElementById('wiz-node-' + i);
+    const conn  = document.getElementById('wiz-conn-' + (i - 1));
+    if (panel) panel.style.display = 'none';
+    if (node)  { node.classList.remove('active', 'done'); }
+    if (conn)  { conn.classList.remove('done'); }
+  }
+
+  // Mark previous steps done
+  for (let i = 1; i < step; i++) {
+    const node = document.getElementById('wiz-node-' + i);
+    const conn = document.getElementById('wiz-conn-' + i);
+    if (node) node.classList.add('done');
+    if (conn) conn.classList.add('done');
+  }
+
+  // Show current panel and mark node active
+  const panel = document.getElementById('wiz-panel-' + step);
+  const node  = document.getElementById('wiz-node-' + step);
+  if (panel) { panel.style.display = 'block'; panel.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  if (node)  node.classList.add('active');
+
+  currentWizardStep = step;
+}
+
+// Select a provider in Step 1 and update everything downstream
+function selectWizardProvider(providerKey) {
+  currentWizardProvider = providerKey;
+  const data = WIZARD_PROVIDER_DATA[providerKey] || WIZARD_PROVIDER_DATA.gmail;
+
+  // Update card selection UI
+  document.querySelectorAll('.provider-wizard-card').forEach(card => {
+    card.classList.remove('active');
+    const checkId = 'pwc-check-' + card.dataset.provider;
+    const check = document.getElementById(checkId);
+    if (check) check.style.display = 'none';
+  });
+  const activeCard = document.querySelector('[data-provider="' + providerKey + '"].provider-wizard-card');
+  if (activeCard) activeCard.classList.add('active');
+  const activeCheck = document.getElementById('pwc-check-' + providerKey);
+  if (activeCheck) activeCheck.style.display = '';
+
+  // Pre-fill server fields
+  const imapEl = document.getElementById('setting-imap');
+  const imapPortEl = document.getElementById('setting-imap-port');
+  const smtpEl = document.getElementById('setting-smtp');
+  const smtpPortEl = document.getElementById('setting-smtp-port');
+  if (imapEl) imapEl.value = data.imap;
+  if (imapPortEl) imapPortEl.value = data.imapPort;
+  if (smtpEl) smtpEl.value = data.smtp;
+  if (smtpPortEl) smtpPortEl.value = data.smtpPort;
+
+  // Update Step 2 content
+  const wiz2Title = document.getElementById('wiz2-title');
+  const wiz2Sub = document.getElementById('wiz2-subtitle');
+  const step2Title = document.getElementById('wiz2-step2-title');
+  const step2Desc = document.getElementById('wiz2-step2-desc');
+  const step3Desc = document.getElementById('wiz2-step3-desc');
+  const linkSec = document.getElementById('wiz2-link-security');
+  const linkPw = document.getElementById('wiz2-link-apppassword');
+  const tipText = document.getElementById('wiz2-tip-text');
+
+  if (wiz2Title) wiz2Title.textContent = data.step2Title;
+  if (wiz2Sub)   wiz2Sub.innerHTML = data.subtitle;
+  if (step2Title) step2Title.textContent = data.step2SubTitle;
+  if (step2Desc) step2Desc.innerHTML = data.step2Desc;
+  if (step3Desc) step3Desc.innerHTML = data.step3Desc;
+  if (tipText) tipText.innerHTML = data.tipText;
+  if (linkSec) { linkSec.href = data.linkSecurity; }
+  if (linkPw) {
+    if (data.linkAppPw) {
+      linkPw.href = data.linkAppPw;
+      linkPw.style.display = '';
+    } else {
+      linkPw.style.display = 'none';
+    }
+  }
+
+  // For custom provider, show advanced settings by default
+  if (providerKey === 'custom') {
+    const advPanel = document.getElementById('wiz-advanced-panel');
+    if (advPanel) advPanel.style.display = 'block';
+  }
+
+  // Also trigger the existing preset btn logic for backward compat
+  const presetBtn = document.getElementById('preset-btn-' + providerKey);
+  if (presetBtn && typeof handleProviderPreset === 'function') {
+    try { handleProviderPreset(providerKey); } catch(e) {}
+  }
+}
+
+// Toggle password visibility (Step 3)
+function wizardTogglePassword() {
+  const input = document.getElementById('setting-password');
+  const icon  = document.getElementById('wiz-eye-icon');
+  if (!input) return;
+  if (input.type === 'password') {
+    input.type = 'text';
+    if (icon) icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>';
+  } else {
+    input.type = 'password';
+    if (icon) icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>';
+  }
+}
+
+// Toggle API key visibility (Step 4)
+function wizardToggleApiKey() {
+  const input = document.getElementById('setting-gemini-key');
+  const icon  = document.getElementById('wiz-apikey-eye');
+  if (!input) return;
+  if (input.type === 'password') {
+    input.type = 'text';
+    if (icon) icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>';
+  } else {
+    input.type = 'password';
+    if (icon) icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>';
+  }
+}
+
+// Toggle advanced server settings panel
+function wizardToggleAdvanced() {
+  const panel = document.getElementById('wiz-advanced-panel');
+  const chevron = document.getElementById('wiz-adv-chevron');
+  if (!panel) return;
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  if (chevron) {
+    chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+    chevron.style.transition = 'transform 0.25s ease';
+  }
+}
+
+// Set automation mode (Step 4 card UI)
+function setAutoMode(value, clickedEl) {
+  document.querySelectorAll('.auto-mode-card').forEach(c => c.classList.remove('active'));
+  if (clickedEl) clickedEl.classList.add('active');
+  const select = document.getElementById('setting-auto-mode');
+  if (select) select.value = value;
+}
+
+// Set sync interval (Step 4 button UI)
+function setSyncInterval(value, clickedEl) {
+  document.querySelectorAll('.sync-int-btn').forEach(b => b.classList.remove('active'));
+  if (clickedEl) clickedEl.classList.add('active');
+  const input = document.getElementById('setting-sync-interval');
+  if (input) input.value = value;
+}
+
+// Initialize wizard when settings view opens
+function initSettingsWizard() {
+  // Default to gmail selected
+  selectWizardProvider('gmail');
+  wizardGoTo(1);
+
+  // Load existing saved settings into the form
+  if (typeof loadSettings === 'function') {
+    try { loadSettings(); } catch(e) {}
+  }
+}
+
+// ── Patch: navigate to settings view triggers wizard init ──
+(function() {
+  const origNavFn = window.navigateTo;
+  window.navigateTo = function(viewId) {
+    if (typeof origNavFn === 'function') origNavFn(viewId);
+    if (viewId === 'settings') {
+      setTimeout(initSettingsWizard, 80);
+    }
+  };
+})();

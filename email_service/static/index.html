@@ -439,187 +439,299 @@
         </div>
 
         <div class="logs-terminal" id="logs-terminal-view">
-          <!-- Filled via JS -->
-        </div>
-      </section>
-
-      <!-- 7. SETTINGS VIEW -->
+          <!-- Filled via      <!-- 7. SETTINGS VIEW - WIZARD -->
       <section class="view-section" id="view-settings">
         <div style="margin-bottom: 16px;">
-          <h3 style="font-size: 1.15rem; font-weight: 600;">⚙️ Connect Your Mailbox & AI</h3>
-          <p style="font-size: 0.85rem; color: var(--text-muted);">Connect your email account and setup your AI intelligence key in a few easy steps.</p>
+          <h3 style="font-size: 1.15rem; font-weight: 600;">⚙️ Connect Your Mailbox &amp; AI</h3>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">Follow these 4 simple steps — it only takes 3 minutes!</p>
         </div>
 
-        <!-- Zero Cross-User Exposure Security Guarantee Banner -->
+        <!-- Security Banner -->
         <div class="security-guarantee-card">
           <div class="sec-badge-icon">
             <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
           </div>
           <div class="sec-badge-content">
-            <div class="sec-badge-title">🛡️ 100% Safe & Private Mailbox Guarantee</div>
-            <div class="sec-badge-desc">
-              Your security is our #1 priority. Every user's emails, AI summaries, drafts, credentials, and logs are physically locked in isolated private folders. One user's data is never visible or exposed to another user. All passwords & API keys are encrypted at rest with AES-256 digital keys.
-            </div>
+            <div class="sec-badge-title">🛡️ 100% Safe &amp; Private — Your Data Is Encrypted &amp; Never Shared</div>
+            <div class="sec-badge-desc">Passwords &amp; API keys are encrypted with AES-256. Each user's data is in an isolated private vault. Nothing is ever shared.</div>
           </div>
         </div>
 
-        <div class="settings-grid">
-          <!-- Column 1: Email Credentials -->
-          <div class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-              <h4 style="font-size: 1rem; color: var(--accent-secondary); margin: 0;">📬 Email Account Connection</h4>
-              <span class="badge badge-success" style="font-size: 0.72rem;">🔒 Isolated Vault</span>
-            </div>
-
-            <!-- Provider Presets -->
-            <div class="form-group" style="margin-bottom: 14px;">
-              <label style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                <span>1-Click Provider Preset</span>
-                <span style="font-size: 0.72rem; color: var(--accent-emerald);">Auto-configures SSL/TLS Ports</span>
-              </label>
-              <div class="provider-preset-grid">
-                <button type="button" class="provider-preset-btn active" data-provider="gmail" id="preset-btn-gmail">
-                  <span class="preset-badge-icon">🔴</span>
-                  <div class="preset-badge-text">
-                    <strong>Gmail</strong>
-                    <small>Port 993 / 587</small>
-                  </div>
-                </button>
-                <button type="button" class="provider-preset-btn" data-provider="outlook" id="preset-btn-outlook">
-                  <span class="preset-badge-icon">🔵</span>
-                  <div class="preset-badge-text">
-                    <strong>Outlook</strong>
-                    <small>Office 365</small>
-                  </div>
-                </button>
-                <button type="button" class="provider-preset-btn" data-provider="yahoo" id="preset-btn-yahoo">
-                  <span class="preset-badge-icon">🟣</span>
-                  <div class="preset-badge-text">
-                    <strong>Yahoo</strong>
-                    <small>Port 993 / 587</small>
-                  </div>
-                </button>
-                <button type="button" class="provider-preset-btn" data-provider="custom" id="preset-btn-custom">
-                  <span class="preset-badge-icon">⚙️</span>
-                  <div class="preset-badge-text">
-                    <strong>Custom</strong>
-                    <small>Any IMAP</small>
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            <!-- 3-Step Setup Guide for App Password -->
-            <div class="app-password-guide-box" id="guide-app-password">
-              <div class="guide-title">
-                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                <strong id="guide-header-title">Easy 3-Step Gmail Connection:</strong>
-              </div>
-              <ol class="guide-step-list" id="guide-step-list">
-                <li>Make sure <strong>2-Step Verification</strong> is ON in your Google Account &gt; Security.</li>
-                <li>Visit <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener" style="color: var(--accent-primary); text-decoration: underline;">Google App Passwords</a> and generate a 16-letter password for <em>"AutoMail"</em>.</li>
-                <li>Enter your email and paste the App Password below. It is encrypted on disk immediately.</li>
-              </ol>
-            </div>
-            
-            <div class="form-group">
-              <label>Email Address</label>
-              <input type="email" class="form-input" id="setting-email" placeholder="your.name@gmail.com">
-            </div>
-
-            <div class="form-group">
-              <label>App Password / Token (16 characters)</label>
-              <input type="password" class="form-input" id="setting-password" placeholder="xxxx xxxx xxxx xxxx">
-              <div class="form-help">
-                Encrypted with AES-256 Fernet key in your private tenant vault. Never stored in plain text.
-              </div>
-            </div>
-
-            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
-              <div class="form-group">
-                <label>IMAP Server / Port</label>
-                <input type="text" class="form-input" id="setting-imap" value="imap.gmail.com">
-              </div>
-              <div class="form-group">
-                <label>Port</label>
-                <input type="number" class="form-input" id="setting-imap-port" value="993">
-              </div>
-            </div>
-
-            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
-              <div class="form-group">
-                <label>SMTP Server / Port</label>
-                <input type="text" class="form-input" id="setting-smtp" value="smtp.gmail.com">
-              </div>
-              <div class="form-group">
-                <label>Port</label>
-                <input type="number" class="form-input" id="setting-smtp-port" value="587">
-              </div>
-            </div>
-
-            <button class="btn btn-secondary" id="btn-test-connection" style="width: 100%; margin-top: 10px;">
-              <span>Test Connection Diagnostics</span>
-            </button>
-            <div id="test-connection-result" style="margin-top: 10px; font-size: 0.82rem; display: none;"></div>
+        <!-- WIZARD PROGRESS TRACKER -->
+        <div class="setup-wizard-track">
+          <div class="wizard-step-node active" id="wiz-node-1">
+            <div class="wizard-node-circle">1</div>
+            <div class="wizard-node-label">Choose Provider</div>
           </div>
+          <div class="wizard-connector" id="wiz-conn-1"></div>
+          <div class="wizard-step-node" id="wiz-node-2">
+            <div class="wizard-node-circle">2</div>
+            <div class="wizard-node-label">Create App Password</div>
+          </div>
+          <div class="wizard-connector" id="wiz-conn-2"></div>
+          <div class="wizard-step-node" id="wiz-node-3">
+            <div class="wizard-node-circle">3</div>
+            <div class="wizard-node-label">Enter &amp; Test</div>
+          </div>
+          <div class="wizard-connector" id="wiz-conn-3"></div>
+          <div class="wizard-step-node" id="wiz-node-4">
+            <div class="wizard-node-circle">4</div>
+            <div class="wizard-node-label">AI Setup</div>
+          </div>
+        </div>
 
-          <!-- Column 2: AI & Automation Mode -->
-          <div class="card">
-            <h4 style="font-size: 1rem; margin-bottom: 8px; color: var(--accent-purple);">🤖 AI Intelligence & Task Automation</h4>
-            <div style="background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.25); border-radius: var(--radius-md); padding: 12px; margin-bottom: 16px; font-size: 0.8rem; line-height: 1.5; color: var(--text-muted);">
-              <strong style="color: #fff;">⚡ AI Executive Briefings & One-Click Execution:</strong>
-              Every incoming email is read by AI first. The AI identifies the sender & company, translates complex emails into a <strong style="color: var(--accent-secondary);">compressed plain-English briefing for the owner</strong>, extracts actionable tasks, and prepares replies for 1-click execution when your API key is configured.
+        <!-- STEP 1: CHOOSE PROVIDER -->
+        <div class="wizard-panel" id="wiz-panel-1">
+          <div class="wizard-panel-header">
+            <div class="wizard-panel-num">Step 1 of 4</div>
+            <h3 class="wizard-panel-title">📬 Which email do you use?</h3>
+            <p class="wizard-panel-subtitle">Just tap your email provider below — we'll configure everything automatically!</p>
+          </div>
+          <div class="provider-wizard-grid">
+            <button type="button" class="provider-wizard-card active" data-provider="gmail" id="preset-btn-gmail" onclick="selectWizardProvider('gmail')">
+              <div class="pwc-icon-wrap pwc-gmail">
+                <svg width="30" height="30" viewBox="0 0 48 48" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M7.2 10H40.8C42.57 10 44 11.43 44 13.2V34.8C44 36.57 42.57 38 40.8 38H7.2C5.43 38 4 36.57 4 34.8V13.2C4 11.43 5.43 10 7.2 10zM24 27L6 14v21h36V14L24 27z" fill="#EA4335"/><path d="M4 14l20 13L44 14" stroke="#fff" stroke-width="2.5" fill="none"/></svg>
+              </div>
+              <div class="pwc-body">
+                <div class="pwc-name">Gmail</div>
+                <div class="pwc-sub">Google Workspace &amp; Personal</div>
+                <div class="pwc-pill">Most Popular ⭐</div>
+              </div>
+              <div class="pwc-check" id="pwc-check-gmail">✓</div>
+            </button>
+            <button type="button" class="provider-wizard-card" data-provider="outlook" id="preset-btn-outlook" onclick="selectWizardProvider('outlook')">
+              <div class="pwc-icon-wrap pwc-outlook">
+                <svg width="30" height="30" viewBox="0 0 48 48" fill="none"><rect x="4" y="8" width="26" height="32" rx="3" fill="#0078D4"/><circle cx="17" cy="24" r="7" fill="#fff"/><rect x="26" y="14" width="18" height="20" rx="2" fill="#50a3e6"/><path d="M26 16l9 8-9 8" stroke="#0078D4" stroke-width="2" fill="none"/></svg>
+              </div>
+              <div class="pwc-body">
+                <div class="pwc-name">Outlook / Office 365</div>
+                <div class="pwc-sub">Microsoft Personal &amp; Business</div>
+                <div class="pwc-pill">Enterprise 🏢</div>
+              </div>
+              <div class="pwc-check" id="pwc-check-outlook" style="display:none">✓</div>
+            </button>
+            <button type="button" class="provider-wizard-card" data-provider="yahoo" id="preset-btn-yahoo" onclick="selectWizardProvider('yahoo')">
+              <div class="pwc-icon-wrap pwc-yahoo">
+                <svg width="30" height="30" viewBox="0 0 48 48" fill="none"><text x="4" y="38" font-size="36" font-family="Georgia,serif" font-weight="bold" fill="#6001D2">Y!</text></svg>
+              </div>
+              <div class="pwc-body">
+                <div class="pwc-name">Yahoo Mail</div>
+                <div class="pwc-sub">Yahoo Personal Accounts</div>
+                <div class="pwc-pill">Personal 📧</div>
+              </div>
+              <div class="pwc-check" id="pwc-check-yahoo" style="display:none">✓</div>
+            </button>
+            <button type="button" class="provider-wizard-card" data-provider="custom" id="preset-btn-custom" onclick="selectWizardProvider('custom')">
+              <div class="pwc-icon-wrap pwc-custom">
+                <svg width="30" height="30" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              </div>
+              <div class="pwc-body">
+                <div class="pwc-name">Other / Custom</div>
+                <div class="pwc-sub">Any IMAP / SMTP server</div>
+                <div class="pwc-pill">Advanced ⚙️</div>
+              </div>
+              <div class="pwc-check" id="pwc-check-custom" style="display:none">✓</div>
+            </button>
+          </div>
+          <button class="btn btn-primary wiz-next-btn" onclick="wizardGoTo(2)">
+            <span>Continue → Create App Password</span>
+          </button>
+        </div>
+
+        <!-- STEP 2: APP PASSWORD GUIDE -->
+        <div class="wizard-panel" id="wiz-panel-2" style="display:none">
+          <div class="wizard-panel-header">
+            <div class="wizard-panel-num">Step 2 of 4</div>
+            <h3 class="wizard-panel-title" id="wiz2-title">🔑 Create a Special App Password</h3>
+            <p class="wizard-panel-subtitle" id="wiz2-subtitle">Gmail needs a special <strong>App Password</strong> — not your regular password. Takes 60 seconds! Follow these steps:</p>
+          </div>
+          <div class="app-pw-steps-grid" id="wiz2-steps-grid">
+            <div class="app-pw-step-card">
+              <div class="apsc-num">1</div>
+              <div class="apsc-body">
+                <div class="apsc-icon">🔒</div>
+                <div class="apsc-title">Turn On 2-Step Verification</div>
+                <div class="apsc-desc">In your Google Account → go to <strong>Security</strong> → turn on <strong>2-Step Verification</strong>. This is required to create App Passwords.</div>
+                <a href="https://myaccount.google.com/security" target="_blank" rel="noopener" class="apsc-link" id="wiz2-link-security">Open Google Security Settings →</a>
+              </div>
             </div>
-
-            <div class="form-group">
-              <label>AI Intelligence Provider</label>
-              <select class="form-select" id="setting-ai-provider">
-                <option value="gemini">Google Gemini API (Recommended for Cloud AI)</option>
-                <option value="built_in">Built-in Smart Natural Language Engine (Offline / Local)</option>
-              </select>
+            <div class="app-pw-step-card">
+              <div class="apsc-num">2</div>
+              <div class="apsc-body">
+                <div class="apsc-icon">🔑</div>
+                <div class="apsc-title" id="wiz2-step2-title">Generate an App Password</div>
+                <div class="apsc-desc" id="wiz2-step2-desc">Go to <strong>App Passwords</strong>, choose <em>"Other (Custom name)"</em>, type <strong>"AutoMail"</strong> and click <strong>Generate</strong>. A 16-character password appears.</div>
+                <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener" class="apsc-link" id="wiz2-link-apppassword">Open App Passwords Page →</a>
+              </div>
             </div>
-
-            <div class="form-group">
-              <label>Gemini API Key</label>
-              <input type="password" class="form-input" id="setting-gemini-key" placeholder="AIzaSy...">
-              <div class="form-help">Enter your API key from Google AI Studio to unlock full reasoning and multi-step task resolution. Encrypted on disk.</div>
+            <div class="app-pw-step-card">
+              <div class="apsc-num">3</div>
+              <div class="apsc-body">
+                <div class="apsc-icon">📋</div>
+                <div class="apsc-title">Copy the 16-Letter Password</div>
+                <div class="apsc-desc" id="wiz2-step3-desc">Google shows a box with a 16-character password like <code class="inline-code">abcd efgh ijkl mnop</code>. <strong>Copy the entire thing</strong> — paste it in Step 3.</div>
+              </div>
             </div>
+          </div>
+          <div class="wizard-tip-box" id="wiz2-tip">
+            <div class="tip-icon">💡</div>
+            <div class="tip-text" id="wiz2-tip-text"><strong>Tip:</strong> The App Password is different from your normal Gmail password. It's a special key just for AutoMail — your real password stays private!</div>
+          </div>
+          <!-- Hidden legacy compat elements -->
+          <div id="guide-app-password" style="display:none">
+            <strong id="guide-header-title"></strong>
+            <ol id="guide-step-list"></ol>
+          </div>
+          <div class="wiz-nav-row">
+            <button class="btn btn-secondary" onclick="wizardGoTo(1)">← Back</button>
+            <button class="btn btn-primary wiz-next-btn" onclick="wizardGoTo(3)">I Have My Password → Continue</button>
+          </div>
+        </div>
 
-            <div style="display: flex; gap: 10px; margin-bottom: 14px;">
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-test-ai" style="width: 100%;">
-                <span>✨ Verify AI Connection & Key</span>
-              </button>
+        <!-- STEP 3: ENTER CREDENTIALS & TEST -->
+        <div class="wizard-panel" id="wiz-panel-3" style="display:none">
+          <div class="wizard-panel-header">
+            <div class="wizard-panel-num">Step 3 of 4</div>
+            <h3 class="wizard-panel-title">✉️ Enter Your Email &amp; App Password</h3>
+            <p class="wizard-panel-subtitle">Paste your email and the App Password you just created. We'll test the connection instantly!</p>
+          </div>
+          <div class="wizard-form-card">
+            <div class="wiz-input-group">
+              <label class="wiz-label"><span class="wiz-label-icon">📧</span>Your Email Address</label>
+              <input type="email" class="form-input wiz-input" id="setting-email" placeholder="your.name@gmail.com" autocomplete="email">
+              <div class="wiz-input-hint">The email address you want AutoMail to manage for you</div>
             </div>
-            <div id="test-ai-result" style="margin-bottom: 14px; font-size: 0.82rem; display: none;"></div>
+            <div class="wiz-input-group">
+              <label class="wiz-label"><span class="wiz-label-icon">🔑</span>App Password <span class="wiz-label-badge">16 characters</span></label>
+              <div class="wiz-password-row">
+                <input type="password" class="form-input wiz-input" id="setting-password" placeholder="xxxx xxxx xxxx xxxx" autocomplete="current-password">
+                <button type="button" class="wiz-toggle-pw-btn" id="wiz-toggle-pw" onclick="wizardTogglePassword()" title="Show / Hide Password">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" id="wiz-eye-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                </button>
+              </div>
+              <div class="wiz-input-hint">🔒 Encrypted with AES-256 immediately — never stored in plain text</div>
+            </div>
+            <div class="wiz-advanced-toggle" onclick="wizardToggleAdvanced()">
+              <span>⚙️ Advanced Server Settings <em style="font-weight:400; opacity:0.65;">(auto-configured for your provider)</em></span>
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" id="wiz-adv-chevron"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+            </div>
+            <div class="wiz-advanced-panel" id="wiz-advanced-panel" style="display:none">
+              <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
+                <div class="form-group"><label>IMAP Server</label><input type="text" class="form-input" id="setting-imap" value="imap.gmail.com"></div>
+                <div class="form-group"><label>Port</label><input type="number" class="form-input" id="setting-imap-port" value="993"></div>
+              </div>
+              <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-top:10px;">
+                <div class="form-group"><label>SMTP Server</label><input type="text" class="form-input" id="setting-smtp" value="smtp.gmail.com"></div>
+                <div class="form-group"><label>Port</label><input type="number" class="form-input" id="setting-smtp-port" value="587"></div>
+              </div>
+            </div>
+            <button class="btn wiz-test-btn" id="btn-test-connection" style="width:100%; margin-top:18px;">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span>🔌 Test My Connection Now</span>
+            </button>
+            <div id="test-connection-result" class="wiz-result-box" style="display:none"></div>
+          </div>
+          <div class="wiz-nav-row">
+            <button class="btn btn-secondary" onclick="wizardGoTo(2)">← Back</button>
+            <button class="btn btn-primary wiz-next-btn" onclick="wizardGoTo(4)">Continue → AI Setup</button>
+          </div>
+        </div>
 
-            <div class="form-group">
-              <label>Gemini Model</label>
+        <!-- STEP 4: AI SETUP -->
+        <div class="wizard-panel" id="wiz-panel-4" style="display:none">
+          <div class="wizard-panel-header">
+            <div class="wizard-panel-num">Step 4 of 4</div>
+            <h3 class="wizard-panel-title">🤖 Power Up Your AI Brain</h3>
+            <p class="wizard-panel-subtitle">Add a free Gemini API key to unlock smart summaries, AI-drafted replies &amp; task extraction!</p>
+          </div>
+          <div class="wizard-form-card">
+            <div class="ai-feature-explainer">
+              <div class="ai-feat-item"><div class="ai-feat-icon">📨</div><div class="ai-feat-text">Reads every email and writes a <strong>plain-English summary</strong> for you</div></div>
+              <div class="ai-feat-item"><div class="ai-feat-icon">✍️</div><div class="ai-feat-text">Drafts <strong>professional replies</strong> you can send with 1 click</div></div>
+              <div class="ai-feat-item"><div class="ai-feat-icon">✅</div><div class="ai-feat-text">Extracts <strong>tasks &amp; to-dos</strong> from long emails automatically</div></div>
+              <div class="ai-feat-item"><div class="ai-feat-icon">🆓</div><div class="ai-feat-text">Gemini API has a <strong>generous free tier</strong> — no credit card needed</div></div>
+            </div>
+            <div class="wiz-api-callout">
+              <div class="wac-left">
+                <div class="wac-title">Get Your Free Gemini API Key</div>
+                <div class="wac-sub">Google AI Studio → Click "Get API Key" → Copy it below</div>
+              </div>
+              <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" class="btn btn-primary btn-sm wac-btn">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                Open AI Studio
+              </a>
+            </div>
+            <div class="wiz-input-group" style="margin-top:16px">
+              <label class="wiz-label"><span class="wiz-label-icon">🔮</span>Gemini API Key <span class="wiz-label-badge wiz-badge-optional">Optional</span></label>
+              <div class="wiz-password-row">
+                <input type="password" class="form-input wiz-input" id="setting-gemini-key" placeholder="AIzaSy..." autocomplete="off">
+                <button type="button" class="wiz-toggle-pw-btn" onclick="wizardToggleApiKey()" title="Show / Hide API Key">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" id="wiz-apikey-eye"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                </button>
+              </div>
+              <div class="wiz-input-hint">Encrypted immediately. Skip to use the built-in AI engine instead.</div>
+            </div>
+            <input type="hidden" id="setting-ai-provider" value="gemini">
+            <div class="wiz-input-group">
+              <label class="wiz-label"><span class="wiz-label-icon">🧠</span>AI Model</label>
               <select class="form-select" id="setting-gemini-model">
-                <option value="gemini-1.5-flash">gemini-1.5-flash (Fast & Accurate)</option>
-                <option value="gemini-1.5-pro">gemini-1.5-pro (High Reasoning)</option>
-                <option value="gemini-2.0-flash">gemini-2.0-flash (Next-Gen)</option>
+                <option value="gemini-1.5-flash">⚡ Gemini 1.5 Flash — Fast &amp; Accurate (Recommended)</option>
+                <option value="gemini-1.5-pro">🧠 Gemini 1.5 Pro — Deep Reasoning</option>
+                <option value="gemini-2.0-flash">🚀 Gemini 2.0 Flash — Next-Gen Speed</option>
               </select>
             </div>
-
-            <div class="form-group">
-              <label>Automation Mode</label>
-              <select class="form-select" id="setting-auto-mode">
-                <option value="review_required">🛡️ Review Required (Human-in-the-Loop) — Recommended</option>
-                <option value="autonomous">⚡ Fully Autonomous (Auto-send replies directly)</option>
-                <option value="draft_only">📝 Draft Only (Generate drafts, no sending)</option>
+            <button class="btn btn-secondary" id="btn-test-ai" style="width:100%; margin-top:10px;">
+              <span>✨ Verify My API Key</span>
+            </button>
+            <div id="test-ai-result" style="margin-top:10px; font-size:0.82rem; display:none;"></div>
+            <div class="wiz-input-group" style="margin-top:20px">
+              <label class="wiz-label"><span class="wiz-label-icon">⚡</span>How should AutoMail handle replies?</label>
+              <div class="automation-mode-grid">
+                <div class="auto-mode-card active" id="amc-review" onclick="setAutoMode('review_required', this)">
+                  <div class="amc-icon">🛡️</div>
+                  <div class="amc-name">Review Mode</div>
+                  <div class="amc-sub">AI drafts, you approve before sending</div>
+                  <div class="amc-badge">Recommended</div>
+                </div>
+                <div class="auto-mode-card" id="amc-auto" onclick="setAutoMode('autonomous', this)">
+                  <div class="amc-icon">⚡</div>
+                  <div class="amc-name">Auto Mode</div>
+                  <div class="amc-sub">AI sends replies automatically</div>
+                  <div class="amc-badge amc-badge-warn">Advanced</div>
+                </div>
+                <div class="auto-mode-card" id="amc-draft" onclick="setAutoMode('draft_only', this)">
+                  <div class="amc-icon">📝</div>
+                  <div class="amc-name">Draft Only</div>
+                  <div class="amc-sub">Writes drafts, never sends</div>
+                  <div class="amc-badge amc-badge-neutral">Safe</div>
+                </div>
+              </div>
+              <select id="setting-auto-mode" style="display:none">
+                <option value="review_required">Review Required</option>
+                <option value="autonomous">Autonomous</option>
+                <option value="draft_only">Draft Only</option>
               </select>
             </div>
-
-            <div class="form-group">
-              <label>Background Polling Interval (Seconds)</label>
-              <input type="number" class="form-input" id="setting-sync-interval" value="60" min="20" max="3600">
+            <div class="wiz-input-group" style="margin-top:14px">
+              <label class="wiz-label"><span class="wiz-label-icon">⏱️</span>How often to check for new emails?</label>
+              <div class="sync-interval-options">
+                <button type="button" class="sync-int-btn active" data-val="60" onclick="setSyncInterval(60, this)">Every minute</button>
+                <button type="button" class="sync-int-btn" data-val="300" onclick="setSyncInterval(300, this)">Every 5 min</button>
+                <button type="button" class="sync-int-btn" data-val="900" onclick="setSyncInterval(900, this)">Every 15 min</button>
+                <button type="button" class="sync-int-btn" data-val="3600" onclick="setSyncInterval(3600, this)">Every hour</button>
+              </div>
+              <input type="hidden" id="setting-sync-interval" value="60">
             </div>
-
-            <button class="btn btn-primary" id="btn-save-settings" style="width: 100%; margin-top: 10px;">
-              <span>Save & Apply Settings</span>
+          </div>
+          <div class="wiz-nav-row">
+            <button class="btn btn-secondary" onclick="wizardGoTo(3)">← Back</button>
+            <button class="btn btn-success wiz-save-btn" id="btn-save-settings">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+              <span>🎉 Save &amp; Start Using AutoMail!</span>
             </button>
           </div>
         </div>
+
       </section>
 
       <!-- 8. ADMIN MONITOR VIEW -->

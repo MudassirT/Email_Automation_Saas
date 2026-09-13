@@ -10,11 +10,16 @@ Enhanced with comprehensive security protections:
 
 import os
 import sys
+import hmac
 import threading
 import time
 from pathlib import Path
 from typing import Dict, Any, Optional, List
-from datetime import datetime
+from datetime import datetime, timedelta
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).parent.parent / ".env")
+load_dotenv()
 
 from fastapi import FastAPI, HTTPException, Request, Response, BackgroundTasks, Depends
 from fastapi.staticfiles import StaticFiles
@@ -155,14 +160,32 @@ def get_current_user_id(request: Request) -> str:
 
 
 def require_admin(request: Request) -> Dict[str, Any]:
-    """Ensure requesting user possesses the 'admin' role."""
-    user = get_current_user_account(request)
-    if not user or user.get("role") != "admin":
+    """Gate: only accepts requests bearing an admin-session JWT.
+
+    Admin access is granted EXCLUSIVELY through /api/admin/login, which
+    validates ADMIN_EMAIL + ADMIN_PASSWORD and issues a short-lived JWT
+    that carries ``is_admin_session=True``.
+
+    The old X-User-Id=default fallback is intentionally NOT honoured here —
+    any request without a valid admin JWT gets 401, not 403, so the browser
+    UI knows to prompt for credentials rather than showing a permission error.
+    """
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
         raise HTTPException(
-            status_code=403,
-            detail="Access forbidden: Enterprise Admin privileges required."
+            status_code=401,
+            detail="Admin authentication required. Please log in via the Admin panel.",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-    return user
+    token = auth_header[7:].strip()
+    payload = decode_jwt_token(token)
+    if not payload or not payload.get("is_admin_session"):
+        raise HTTPException(
+            status_code=401,
+            detail="Admin session token is missing or expired. Please log in again.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return payload
 
 
 # Mount static directory
@@ -400,7 +423,60 @@ def switch_tenant(payload: SwitchTenantPayload, response: Response):
     }
 
 
-# --- ADMIN MONITORING ENDPOINTS (PROTECTED WITH RBAC) ---
+# --- ADMIN AUTHENTICATION ENDPOINTS ---
+
+class AdminLoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+@app.post("/api/admin/login")
+async def admin_login(payload: AdminLoginRequest, request: Request):
+    """Authenticate with ADMIN_EMAIL + ADMIN_PASSWORD; returns a 2-hour admin JWT.
+
+    The issued JWT carries ``is_admin_session=True`` which is the ONLY
+    credential ``require_admin`` will accept — any other path is blocked.
+    """
+    # Rate-limit admin login attempts (10 per minute per IP)
+    client_ip = request.client.host if request.client else "127.0.0.1"
+    if not api_rate_limiter.is_allowed(f"admin_login:{client_ip}", max_requests=10, window_seconds=60):
+        raise HTTPException(status_code=429, detail="Too many login attempts. Try again in a minute.")
+
+    admin_email = os.environ.get("ADMIN_EMAIL", "").strip()
+    admin_password = os.environ.get("ADMIN_PASSWORD", "").strip()
+
+    if not admin_email or not admin_password:
+        raise HTTPException(
+            status_code=503,
+            detail="Admin credentials not configured. Set ADMIN_EMAIL and ADMIN_PASSWORD in .env.",
+        )
+
+    # Constant-time comparison — prevents timing-attack credential enumeration
+    email_ok = hmac.compare_digest(payload.email.strip().lower(), admin_email.lower())
+    pass_ok  = hmac.compare_digest(payload.password.strip(), admin_password)
+
+    if not (email_ok and pass_ok):
+        raise HTTPException(status_code=401, detail="Invalid admin email or password.")
+
+    # Issue a short-lived admin JWT (2 hours)
+    admin_token = create_jwt_token(
+        "__admin__",
+        email=admin_email,
+        role="admin",
+        extra_claims={"is_admin_session": True},
+        expires_in=timedelta(hours=2),
+    )
+    storage.log("ADMIN", f"Admin panel login from {client_ip}")
+    return {"token": admin_token, "expires_in": 7200, "email": admin_email}
+
+
+@app.post("/api/admin/logout")
+def admin_logout():
+    """Client-side logout — token invalidation happens in the browser."""
+    return {"success": True, "message": "Admin session cleared. Please discard your token."}
+
+
+# --- ADMIN MONITORING ENDPOINTS (PROTECTED WITH ADMIN JWT) ---
 @app.get("/api/admin/overview")
 def get_admin_overview(admin_user: Dict[str, Any] = Depends(require_admin)):
     """Retrieve global system-wide KPIs across all tenants (Admin only)."""

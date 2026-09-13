@@ -38,6 +38,157 @@ let selectedEmailId = null;
 let refreshInterval = null;
 let currentUser = null;
 
+// ── Enterprise Admin Session Management ────────────────────────────────────
+const ADMIN_TOKEN_KEY = "automail_admin_token";
+const ADMIN_EXPIRY_KEY = "automail_admin_expiry";
+
+function getAdminToken() {
+  const token = sessionStorage.getItem(ADMIN_TOKEN_KEY);
+  const expiry = parseInt(sessionStorage.getItem(ADMIN_EXPIRY_KEY) || "0", 10);
+  if (!token || Date.now() > expiry) {
+    sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+    sessionStorage.removeItem(ADMIN_EXPIRY_KEY);
+    updateAdminNavBadge();
+    return null;
+  }
+  return token;
+}
+
+function setAdminToken(token, expiresInSeconds) {
+  sessionStorage.setItem(ADMIN_TOKEN_KEY, token);
+  sessionStorage.setItem(ADMIN_EXPIRY_KEY, String(Date.now() + (expiresInSeconds || 7200) * 1000));
+  updateAdminNavBadge();
+}
+
+function clearAdminToken() {
+  sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+  sessionStorage.removeItem(ADMIN_EXPIRY_KEY);
+  updateAdminNavBadge();
+}
+
+function updateAdminNavBadge() {
+  const badge = document.getElementById("badge-admin-count");
+  if (!badge) return;
+  if (getAdminToken()) {
+    badge.textContent = "✓ Active";
+    badge.style.background = "rgba(16, 185, 129, 0.2)";
+    badge.style.color = "var(--accent-emerald)";
+    badge.style.borderColor = "rgba(16, 185, 129, 0.4)";
+  } else {
+    badge.textContent = "Admin 🔒";
+    badge.style.background = "rgba(168, 85, 247, 0.2)";
+    badge.style.color = "var(--accent-purple)";
+    badge.style.borderColor = "rgba(168, 85, 247, 0.4)";
+  }
+}
+
+function openAdminLoginModal() {
+  const alertEl = document.getElementById("admin-login-alert");
+  if (alertEl) {
+    alertEl.style.display = "none";
+    alertEl.textContent = "";
+  }
+  const emailInput = document.getElementById("admin-login-email");
+  const passInput = document.getElementById("admin-login-password");
+  if (emailInput && !emailInput.value) emailInput.value = "admin@automail.ai";
+  if (passInput) passInput.value = "";
+  openModal("modal-admin-login");
+  setTimeout(() => passInput?.focus(), 150);
+}
+
+async function submitAdminLogin() {
+  const email = document.getElementById("admin-login-email")?.value.trim();
+  const password = document.getElementById("admin-login-password")?.value.trim();
+  const alertEl = document.getElementById("admin-login-alert");
+  const submitBtn = document.getElementById("btn-admin-login-submit");
+
+  if (!email || !password) {
+    if (alertEl) {
+      alertEl.textContent = "Please enter both admin email and password.";
+      alertEl.style.display = "block";
+    }
+    return;
+  }
+
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = "<span>Authenticating...</span>";
+  }
+
+  try {
+    const res = await _origFetch("/api/admin/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Requested-With": "AutoMail"
+      },
+      body: JSON.stringify({ email, password })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      if (alertEl) {
+        alertEl.textContent = data.detail || "Authentication failed. Invalid admin credentials.";
+        alertEl.style.display = "block";
+      }
+      return;
+    }
+
+    setAdminToken(data.token, data.expires_in || 7200);
+    closeModal("modal-admin-login");
+    const passInput = document.getElementById("admin-login-password");
+    if (passInput) passInput.value = "";
+    showToast("Admin access granted — secure 2-hour session active", "success");
+    switchView("admin");
+  } catch (err) {
+    if (alertEl) {
+      alertEl.textContent = "Network error connecting to authentication service.";
+      alertEl.style.display = "block";
+    }
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = `<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg><span>Unlock Admin Panel</span>`;
+    }
+  }
+}
+
+async function handleAdminLogout() {
+  clearAdminToken();
+  showToast("Admin session locked & token discarded", "info");
+  try {
+    await _origFetch("/api/admin/logout", { method: "POST" });
+  } catch (_) {}
+  switchView("overview");
+}
+
+async function adminFetch(url, options = {}) {
+  const token = getAdminToken();
+  if (!token) {
+    clearAdminToken();
+    openAdminLoginModal();
+    return null;
+  }
+
+  options.headers = options.headers || {};
+  if (typeof options.headers.set === "function") {
+    options.headers.set("Authorization", `Bearer ${token}`);
+    options.headers.set("X-Requested-With", "AutoMail");
+  } else {
+    options.headers["Authorization"] = `Bearer ${token}`;
+    options.headers["X-Requested-With"] = "AutoMail";
+  }
+
+  const res = await _origFetch(url, options);
+  if (res.status === 401) {
+    clearAdminToken();
+    openAdminLoginModal();
+    showToast("Admin session expired. Please sign in again.", "warning");
+    return null;
+  }
+  return res;
+}
+
 // DOM Ready
 document.addEventListener("DOMContentLoaded", async () => {
   // Check for Google OAuth callback parameters in URL
@@ -64,6 +215,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   initProviderPresets();
   updateEnterpriseROI();
   setCapTab(0);
+  updateAdminNavBadge();
 
   await checkAuthStatus();
   await loadAllData();
@@ -120,6 +272,12 @@ function initNav() {
 }
 
 function switchView(viewName) {
+  // Admin Guard: require valid admin session token
+  if (viewName === "admin" && !getAdminToken()) {
+    openAdminLoginModal();
+    return;
+  }
+
   currentView = viewName;
 
   // Update Nav Items
@@ -150,6 +308,24 @@ function switchView(viewName) {
   };
   const titleEl = document.getElementById("current-view-title");
   if (titleEl) titleEl.textContent = titles[viewName] || "Dashboard";
+
+  const breadcrumbs = {
+    overview: "Live Telemetry & Ingestion",
+    inbox: "AI Categorized & Prioritized",
+    approvals: "Human-in-the-Loop Safe Action Dispatch",
+    rules: "Autonomous Filtering & Escalations",
+    sent: "Audit Dispatch Outbox",
+    logs: "Unified Multi-Tenant Telemetry Stream",
+    chat: "Interactive Multi-Tenant RAG AI",
+    landing: "Value Proposition & Enterprise Simulator",
+    compliance: "SOC-2 & Encryption Controls",
+    integrations: "Enterprise API Gateways",
+    team: "Multi-Seat Role Management",
+    settings: "Credentials & Engine Config",
+    admin: "Executive Cross-Tenant Observability"
+  };
+  const crumbEl = document.getElementById("current-view-breadcrumb");
+  if (crumbEl) crumbEl.textContent = breadcrumbs[viewName] || "Dashboard";
 
   // Trigger view-specific refreshes
   if (viewName === "inbox") loadInbox();
@@ -279,6 +455,29 @@ function initActions() {
     });
   }
 
+  const adminLogoutBtn = document.getElementById("btn-admin-logout");
+  if (adminLogoutBtn) {
+    adminLogoutBtn.addEventListener("click", handleAdminLogout);
+  }
+
+  const adminLoginBtn = document.getElementById("btn-admin-login-submit");
+  if (adminLoginBtn) {
+    adminLoginBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      submitAdminLogin();
+    });
+  }
+
+  const adminPassInput = document.getElementById("admin-login-password");
+  if (adminPassInput) {
+    adminPassInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        submitAdminLogin();
+      }
+    });
+  }
+
   // Universal Command Palette Triggers
   const topbarCmdBtn = document.getElementById("btn-topbar-command");
   if (topbarCmdBtn) {
@@ -358,7 +557,9 @@ async function loadAllData(showToasts = true) {
   else if (currentView === "compliance") loadComplianceView();
   else if (currentView === "integrations") loadIntegrationsView();
   else if (currentView === "team") loadTeamView();
-  else if (currentView === "admin") loadAdminView();
+  else if (currentView === "admin") {
+    if (getAdminToken()) loadAdminView();
+  }
 }
 
 async function loadStats() {
@@ -1386,8 +1587,8 @@ async function loadAdminView() {
 
 async function loadAdminOverview() {
   try {
-    const res = await fetch("/api/admin/overview");
-    if (!res.ok) return;
+    const res = await adminFetch("/api/admin/overview");
+    if (!res || !res.ok) return;
     const data = await res.json();
 
     const uEl = document.getElementById("admin-stat-users");
@@ -1410,8 +1611,8 @@ async function loadAdminOverview() {
 
 async function loadAdminUsers() {
   try {
-    const res = await fetch("/api/admin/users");
-    if (!res.ok) return;
+    const res = await adminFetch("/api/admin/users");
+    if (!res || !res.ok) return;
     _cachedAdminUsers = await res.json();
     const countBadge = document.getElementById("admin-user-count-badge");
     if (countBadge) countBadge.textContent = `${_cachedAdminUsers.length} tenants`;
@@ -1516,10 +1717,11 @@ function renderAdminUsersTable(filter = "") {
 async function adminSyncUser(userId) {
   showToast(`Initiating sync for tenant '${userId}'...`, "info");
   try {
-    const res = await fetch(`/api/admin/users/${encodeURIComponent(userId)}/sync`, {
+    const res = await adminFetch(`/api/admin/users/${encodeURIComponent(userId)}/sync`, {
       method: "POST",
       headers: { "Content-Type": "application/json" }
     });
+    if (!res) return;
     const data = await res.json();
     if (res.ok && data.success) {
       const details = data.details || {};
@@ -1540,10 +1742,11 @@ async function adminSyncAll() {
   showToast("Triggering global sync across all mailboxes...", "info");
 
   try {
-    const res = await fetch("/api/admin/sync-all", {
+    const res = await adminFetch("/api/admin/sync-all", {
       method: "POST",
       headers: { "Content-Type": "application/json" }
     });
+    if (!res) return;
     const data = await res.json();
     if (res.ok && data.success) {
       showToast(`Global sync completed! Processed ${data.synced_tenants} active tenants.`, "success");
@@ -1563,8 +1766,8 @@ async function loadAdminAuditLogs() {
   if (!terminal) return;
 
   try {
-    const res = await fetch("/api/admin/audit-logs?limit=100");
-    if (!res.ok) return;
+    const res = await adminFetch("/api/admin/audit-logs?limit=100");
+    if (!res || !res.ok) return;
     const logs = await res.json();
 
     if (logs.length === 0) {
@@ -1588,8 +1791,8 @@ async function loadAdminAuditLogs() {
 
 async function adminInspectUser(userId) {
   try {
-    const res = await fetch(`/api/admin/users/${encodeURIComponent(userId)}/inspect`);
-    if (!res.ok) {
+    const res = await adminFetch(`/api/admin/users/${encodeURIComponent(userId)}/inspect`);
+    if (!res || !res.ok) {
       showToast("Failed to fetch tenant inspection data", "error");
       return;
     }

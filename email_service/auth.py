@@ -108,8 +108,24 @@ def verify_password(plain_password: str, password_hash: str) -> bool:
         return False
 
 
-def create_jwt_token(user_or_id: Any, email: str = "", role: str = "user", name: str = "") -> str:
-    """Issue a signed JWT session token from user dict or positional parameters."""
+def create_jwt_token(
+    user_or_id: Any,
+    email: str = "",
+    role: str = "user",
+    name: str = "",
+    extra_claims: Optional[Dict[str, Any]] = None,
+    expires_in=None,            # Optional[timedelta]
+) -> str:
+    """Issue a signed JWT session token from user dict or positional parameters.
+
+    Args:
+        user_or_id: A user dict *or* a plain string/id.
+        email: Overrides user dict email when passing a plain id.
+        role: Token role claim (default ``user``).
+        name: Display name.
+        extra_claims: Additional payload fields merged in verbatim.
+        expires_in: ``datetime.timedelta`` overriding the default session TTL.
+    """
     if isinstance(user_or_id, dict):
         user_id = user_or_id.get("id") or user_or_id.get("sub", "default")
         email = user_or_id.get("email", "")
@@ -119,14 +135,17 @@ def create_jwt_token(user_or_id: Any, email: str = "", role: str = "user", name:
         user_id = str(user_or_id)
 
     now = int(time.time())
-    payload = {
+    ttl = int(expires_in.total_seconds()) if expires_in is not None else JWT_EXPIRATION_SECONDS
+    payload: Dict[str, Any] = {
         "sub": user_id,
         "email": email,
         "name": name or email,
         "role": role,
         "iat": now,
-        "exp": now + JWT_EXPIRATION_SECONDS
+        "exp": now + ttl,
     }
+    if extra_claims:
+        payload.update(extra_claims)
     return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
 
 

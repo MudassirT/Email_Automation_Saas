@@ -504,6 +504,7 @@ def update_email_status(
 
 # --- APPROVALS & DRAFTS ---
 @app.get("/api/approvals")
+@app.get("/api/drafts")
 def get_approvals(status: Optional[str] = None, user_id: str = Depends(get_current_user_id)):
     user_storage = storage.for_user(user_id)
     drafts = user_storage.get_drafts(status=status)
@@ -518,6 +519,7 @@ def get_approvals(status: Optional[str] = None, user_id: str = Depends(get_curre
 
 
 @app.post("/api/approvals/{draft_id}/approve")
+@app.post("/api/drafts/{draft_id}/approve")
 def approve_draft(draft_id: str, user_id: str = Depends(get_current_user_id)):
     success, message = email_engine.send_draft(draft_id, user_id=user_id)
     if not success:

@@ -23,18 +23,23 @@
           <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
         </div>
         <div class="logo-text">
-          <h1>AutoMail AI</h1>
+          <h1>AutoMail <span class="logo-ai-tag">AI</span></h1>
           <p>Enterprise Automation</p>
         </div>
       </div>
 
-      <!-- Workspace Switcher Pill -->
+      <!-- Enterprise Workspace Switcher -->
       <div class="user-switcher-pill" id="user-switcher-pill" title="Click to switch isolated user workspace (Zero Cross-Exposure)">
         <div class="switcher-pill-left">
-          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-          <span id="current-user-badge">Workspace: default</span>
+          <div class="workspace-avatar">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+          </div>
+          <div class="workspace-meta">
+            <span class="workspace-name" id="current-user-badge">Default Workspace</span>
+            <span class="workspace-tag">Active Vault</span>
+          </div>
         </div>
-        <span class="pill-caret">▾</span>
+        <svg class="pill-caret-svg" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
       </div>
 
       <!-- Quick Command / Search Bar Trigger -->
@@ -47,8 +52,8 @@
       <!-- Primary Action Button -->
       <div class="sidebar-quick-actions">
         <button class="btn btn-primary btn-sync-sidebar" id="btn-sync-now" title="Synchronize mailboxes via IMAP">
-          <svg id="sync-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-          <span id="sync-btn-text">Sync Emails Now</span>
+          <svg id="sync-icon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          <span id="sync-btn-text">Sync Mailboxes</span>
         </button>
       </div>
     </div>
@@ -58,72 +63,68 @@
       <div class="nav-section-label">MAIN</div>
       <a class="nav-item active" data-view="overview" id="nav-overview">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
-        <span>Overview</span>
+        <span class="nav-label">Overview</span>
       </a>
 
       <a class="nav-item" data-view="inbox" id="nav-inbox">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
-        <span>Inbox & Threads</span>
-        <span class="nav-badge" id="badge-inbox-count">0</span>
+        <span class="nav-label">Inbox & Threads</span>
+        <span class="nav-badge" id="badge-inbox-count" style="display:none">0</span>
       </a>
 
       <a class="nav-item" data-view="approvals" id="nav-approvals">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        <span>Approval Queue</span>
-        <span class="nav-badge urgent" id="badge-approvals-count">0</span>
+        <span class="nav-label">Approval Queue</span>
+        <span class="nav-badge urgent" id="badge-approvals-count" style="display:none">0</span>
       </a>
 
       <a class="nav-item" data-view="rules" id="nav-rules">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-        <span>Automation Rules</span>
-        <span class="nav-badge" id="badge-rules-count">0</span>
+        <span class="nav-label">Automation Rules</span>
+        <span class="nav-badge" id="badge-rules-count" style="display:none">0</span>
       </a>
 
       <a class="nav-item" data-view="sent" id="nav-sent">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-        <span>Sent History</span>
+        <span class="nav-label">Sent History</span>
       </a>
 
-      <div class="nav-section-label" style="margin-top: 14px;">INTELLIGENCE & SEC</div>
+      <div class="nav-section-label">INTELLIGENCE & SECURITY</div>
       <a class="nav-item" data-view="compliance" id="nav-compliance">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-        <span>Security & Compliance</span>
-        <span class="nav-badge" style="background: rgba(14, 165, 233, 0.2); color: var(--accent-cyan); border-color: rgba(14, 165, 233, 0.4);">SOC-2</span>
+        <span class="nav-label">Security & Compliance</span>
       </a>
 
       <a class="nav-item" data-view="logs" id="nav-logs">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-        <span>Live Activity Logs</span>
+        <span class="nav-label">Activity Logs</span>
       </a>
 
       <a class="nav-item" data-view="landing" id="nav-landing">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-        <span>Enterprise Showcase</span>
-        <span class="nav-badge" style="background: rgba(16, 185, 129, 0.2); color: var(--accent-emerald); border-color: rgba(16, 185, 129, 0.4);">HQ</span>
+        <span class="nav-label">Enterprise Showcase</span>
       </a>
 
       <a class="nav-item" data-view="integrations" id="nav-integrations">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"/></svg>
-        <span>Integrations Hub</span>
-        <span class="nav-badge" style="background: rgba(245, 158, 11, 0.2); color: var(--accent-amber); border-color: rgba(245, 158, 11, 0.4);">API</span>
+        <span class="nav-label">Integrations Hub</span>
       </a>
 
       <a class="nav-item" data-view="team" id="nav-team">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-        <span>Team & Seats</span>
-        <span class="nav-badge" style="background: rgba(236, 72, 153, 0.2); color: #ec4899; border-color: rgba(236, 72, 153, 0.4);">Seats</span>
+        <span class="nav-label">Team & Seats</span>
       </a>
 
       <a class="nav-item" data-view="settings" id="nav-settings">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-        <span>Settings & Keys</span>
+        <span class="nav-label">Settings & Keys</span>
       </a>
 
-      <div class="nav-section-label" style="margin-top: 14px;">ENTERPRISE ADMIN</div>
+      <div class="nav-section-label">ADMINISTRATION</div>
       <a class="nav-item" data-view="admin" id="nav-admin">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-        <span>Admin Monitor</span>
-        <span class="nav-badge" id="badge-admin-count" style="background: rgba(168, 85, 247, 0.2); color: var(--accent-purple); border-color: rgba(168, 85, 247, 0.4);">Admin 🔒</span>
+        <span class="nav-label">Admin Monitor</span>
+        <span class="nav-badge" id="badge-admin-count" style="background: rgba(168, 85, 247, 0.15); color: var(--accent-purple); border: 1px solid rgba(168, 85, 247, 0.3);">Admin 🔒</span>
       </a>
     </nav>
 
@@ -131,7 +132,7 @@
     <div class="sidebar-tools">
       <div class="ai-status-pill" id="ai-status-pill" onclick="switchView('settings')" title="AI Intelligence Engine — Click to configure API Key">
         <span class="ai-status-dot" id="ai-status-dot"></span>
-        <span id="ai-status-label">AI: Ready</span>
+        <span id="ai-status-label">AI Copilot: Active</span>
       </div>
       <div class="tools-buttons">
         <button class="btn-tool" id="btn-density-toggle" title="Toggle Comfortable / Compact Data Density">
@@ -158,17 +159,20 @@
           <div class="user-email-text" id="sidebar-user-email">admin@automail.ai</div>
         </div>
         <button class="btn-icon" id="btn-sidebar-auth" title="Sign In / Out" onclick="event.stopPropagation(); handleSignOutOrOpen();">
-          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
         </button>
       </div>
 
-      <div class="sync-status">
-        <span class="status-dot" id="status-dot"></span>
-        <span id="sync-status-text">Engine Online (Port 8000)</span>
-      </div>
-      <div class="security-shield-badge" style="margin-top: 6px; font-size: 0.72rem; color: var(--accent-emerald); display: flex; align-items: center; gap: 6px;">
-        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-        <span>Security Shield: Encrypted & Guarded</span>
+      <!-- Unified System & Security Status -->
+      <div class="sidebar-meta-status">
+        <div class="meta-status-row">
+          <span class="status-dot" id="status-dot"></span>
+          <span class="meta-status-text" id="sync-status-text">Engine Online (Port 8000)</span>
+        </div>
+        <div class="meta-security-row">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+          <span>SOC-2 Type II • Guarded</span>
+        </div>
       </div>
     </div>
   </aside>

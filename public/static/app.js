@@ -568,18 +568,27 @@ async function loadStats() {
     document.getElementById("stat-sent-count").textContent = stats.sent_count || 0;
     document.getElementById("stat-active-rules").textContent = stats.active_rules || 0;
 
-    // Badges
+    // Badges (cleanly displayed only when non-zero to preserve calm navigation aesthetics)
     const badgeInbox = document.getElementById("badge-inbox-count");
-    if (badgeInbox) badgeInbox.textContent = stats.unread_emails || 0;
+    if (badgeInbox) {
+      const unread = stats.unread_emails || 0;
+      badgeInbox.textContent = unread;
+      badgeInbox.style.display = unread > 0 ? "inline-flex" : "none";
+    }
 
     const badgeApprovals = document.getElementById("badge-approvals-count");
     if (badgeApprovals) {
-      badgeApprovals.textContent = stats.pending_approvals || 0;
-      badgeApprovals.style.display = stats.pending_approvals > 0 ? "inline-block" : "none";
+      const pending = stats.pending_approvals || 0;
+      badgeApprovals.textContent = pending;
+      badgeApprovals.style.display = pending > 0 ? "inline-flex" : "none";
     }
 
     const badgeRules = document.getElementById("badge-rules-count");
-    if (badgeRules) badgeRules.textContent = stats.active_rules || 0;
+    if (badgeRules) {
+      const activeR = stats.active_rules || 0;
+      badgeRules.textContent = activeR;
+      badgeRules.style.display = activeR > 0 ? "inline-flex" : "none";
+    }
 
   } catch (e) {
     console.error("Error loading stats:", e);
@@ -1289,7 +1298,9 @@ function updateActiveUserBadge() {
   const currentUserId = localStorage.getItem("automail_user_id") || "default";
   const badge = document.getElementById("current-user-badge");
   if (badge) {
-    badge.textContent = `User: ${currentUserId}`;
+    badge.textContent = currentUserId === "default"
+      ? "Default Workspace"
+      : `${currentUserId.charAt(0).toUpperCase() + currentUserId.slice(1)} Workspace`;
   }
 }
 
@@ -1907,7 +1918,9 @@ function updateUserProfileUI(authData) {
   }
   const currentBadge = document.getElementById("current-user-badge");
   if (currentBadge) {
-    currentBadge.textContent = `User: ${activeId}`;
+    currentBadge.textContent = activeId === "default"
+      ? "Default Workspace"
+      : `${activeId.charAt(0).toUpperCase() + activeId.slice(1)} Workspace`;
   }
 
   const chatWsText = document.getElementById("chat-active-workspace-text");

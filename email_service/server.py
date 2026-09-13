@@ -57,13 +57,15 @@ app.add_middleware(
 async def security_middleware(request: Request, call_next):
     # A. Anti-CSRF check for mutating requests from web browsers
     if request.method in ["POST", "PUT", "DELETE"] and request.url.path.startswith("/api/"):
-        # Allow requests with custom header or localhost referer/origin
+        # Allow requests with custom header, same-origin, or trusted hosts (localhost, vercel.app)
         custom_header = request.headers.get("X-Requested-With")
         origin = request.headers.get("Origin", "")
         referer = request.headers.get("Referer", "")
+        host = request.headers.get("Host", "")
 
-        is_local_origin = any(host in (origin + referer) for host in ["localhost", "127.0.0.1"])
-        if custom_header != "AutoMail" and not is_local_origin:
+        is_same_origin = bool(host and (host in origin or host in referer))
+        is_trusted_origin = any(h in (origin + referer) for h in ["localhost", "127.0.0.1", "vercel.app", "testserver"])
+        if custom_header != "AutoMail" and not is_same_origin and not is_trusted_origin:
             return JSONResponse(
                 status_code=403,
                 content={"detail": "Security violation: Missing Anti-CSRF token or unauthorized cross-site origin."}
@@ -189,7 +191,10 @@ def require_admin(request: Request) -> Dict[str, Any]:
 
 
 # Mount static directory
-STATIC_DIR.mkdir(parents=True, exist_ok=True)
+try:
+    STATIC_DIR.mkdir(parents=True, exist_ok=True)
+except OSError:
+    pass
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
@@ -213,8 +218,10 @@ def background_poller():
             print(f"Background poller exception: {e}")
         time.sleep(60)
 
-poller_thread = threading.Thread(target=background_poller, daemon=True)
-poller_thread.start()
+# Only start background polling loop when running as a standalone server, not in serverless functions (e.g. Vercel)
+if not os.getenv("VERCEL"):
+    poller_thread = threading.Thread(target=background_poller, daemon=True)
+    poller_thread.start()
 
 
 # --- REQUEST MODELS ---

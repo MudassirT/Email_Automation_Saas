@@ -1,0 +1,28 @@
+# Version Control & IDE
+.git
+.gitignore
+.gitattributes
+.github
+.agents
+.gemini
+
+# Secrets & Environment Variables (Set these in Vercel Dashboard -> Settings -> Environment Variables)
+.env
+.env.local
+.env.*.local
+*.vault_key
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Local Test Scripts (Keep deployment bundle small)
+test_*.py
+tests/
+scratch/
+.system_generated/
+
+# Windows batch files
+*.bat

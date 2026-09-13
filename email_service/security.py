@@ -21,7 +21,10 @@ from cryptography.hazmat.primitives import hashes
 def get_data_dir() -> Path:
     custom = os.getenv("AUTOMAIL_DATA_DIR")
     p = Path(custom) if custom else Path(__file__).parent / "data"
-    p.mkdir(parents=True, exist_ok=True)
+    try:
+        p.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        pass
     return p
 
 
@@ -29,7 +32,10 @@ class SecretVault:
     """Manages encryption and decryption of credentials on disk with tenant envelope keys."""
     
     def __init__(self):
-        get_data_dir().mkdir(parents=True, exist_ok=True)
+        try:
+            get_data_dir().mkdir(parents=True, exist_ok=True)
+        except OSError:
+            pass
         self.key = self._get_or_create_key()
         self.cipher = Fernet(self.key)
 

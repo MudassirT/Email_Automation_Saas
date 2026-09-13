@@ -34,7 +34,10 @@ else:
 def get_data_dir() -> Path:
     custom = os.getenv("AUTOMAIL_DATA_DIR")
     p = Path(custom) if custom else Path(__file__).parent / "data"
-    p.mkdir(parents=True, exist_ok=True)
+    try:
+        p.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        pass
     return p
 
 def get_users_file() -> Path:
@@ -162,7 +165,10 @@ class UserManager:
     """Manages user persistence, registration, credentials, and tenant binding."""
 
     def __init__(self):
-        get_data_dir().mkdir(parents=True, exist_ok=True)
+        try:
+            get_data_dir().mkdir(parents=True, exist_ok=True)
+        except OSError:
+            pass
         self.users: Dict[str, Dict[str, Any]] = {}
         self._load_or_init()
 

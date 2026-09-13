@@ -16,7 +16,10 @@ import hashlib
 def get_data_dir() -> Path:
     custom = os.getenv("AUTOMAIL_DATA_DIR")
     p = Path(custom) if custom else Path(__file__).parent / "data"
-    p.mkdir(parents=True, exist_ok=True)
+    try:
+        p.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        pass
     return p
 
 DATA_DIR = get_data_dir()
@@ -167,13 +170,19 @@ class StorageManager:
         from .security import tenant_security
         self.user_id = tenant_security.sanitize_tenant_id(user_id)
         data_dir = get_data_dir()
-        data_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            data_dir.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            pass
         
         if self.user_id == "default":
             self.state_file = data_dir / "state.json"
         else:
             tenant_dir = data_dir / "tenants" / self.user_id
-            tenant_dir.mkdir(parents=True, exist_ok=True)
+            try:
+                tenant_dir.mkdir(parents=True, exist_ok=True)
+            except OSError:
+                pass
             self.state_file = tenant_dir / "state.json"
             
         self._load()

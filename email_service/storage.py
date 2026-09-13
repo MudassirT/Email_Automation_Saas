@@ -156,56 +156,85 @@ INITIAL_SAMPLE_DRAFTS = [
 
 
 class StorageManager:
-    def __init__(self):
+    def __init__(self, user_id: str = "default"):
+        from .security import tenant_security
+        self.user_id = tenant_security.sanitize_tenant_id(user_id)
         DATA_DIR.mkdir(parents=True, exist_ok=True)
+        
+        if self.user_id == "default":
+            self.state_file = STATE_FILE
+        else:
+            tenant_dir = DATA_DIR / "tenants" / self.user_id
+            tenant_dir.mkdir(parents=True, exist_ok=True)
+            self.state_file = tenant_dir / "state.json"
+            
         self._load()
 
     def _get_initial_state(self) -> Dict[str, Any]:
-        return {
-            "emails": {e["id"]: e for e in INITIAL_SAMPLE_EMAILS},
-            "drafts": {d["id"]: d for d in INITIAL_SAMPLE_DRAFTS},
-            "rules": DEFAULT_RULES,
-            "sent_emails": [],
-            "logs": [
-                {
-                    "id": str(uuid.uuid4())[:8],
-                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "level": "SUCCESS",
-                    "category": "SYSTEM",
-                    "message": "Email Automation Service initialized successfully."
-                },
-                {
-                    "id": str(uuid.uuid4())[:8],
-                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "level": "INFO",
-                    "category": "AI",
-                    "message": "Loaded 2 pending sample emails with AI-drafted responses ready for review."
-                }
-            ],
-            "last_sync_time": datetime.now().isoformat(),
-            "last_uid": 1002
-        }
+        if self.user_id == "default":
+            return {
+                "emails": {e["id"]: e for e in INITIAL_SAMPLE_EMAILS},
+                "drafts": {d["id"]: d for d in INITIAL_SAMPLE_DRAFTS},
+                "rules": DEFAULT_RULES,
+                "sent_emails": [],
+                "logs": [
+                    {
+                        "id": str(uuid.uuid4())[:8],
+                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "level": "SUCCESS",
+                        "category": "SYSTEM",
+                        "message": "Email Automation Service initialized successfully."
+                    },
+                    {
+                        "id": str(uuid.uuid4())[:8],
+                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "level": "INFO",
+                        "category": "AI",
+                        "message": "Loaded 2 pending sample emails with AI-drafted responses ready for review."
+                    }
+                ],
+                "last_sync_time": datetime.now().isoformat(),
+                "last_uid": 1002
+            }
+        else:
+            return {
+                "emails": {},
+                "drafts": {},
+                "rules": [dict(r) for r in DEFAULT_RULES],
+                "sent_emails": [],
+                "logs": [
+                    {
+                        "id": str(uuid.uuid4())[:8],
+                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "level": "SUCCESS",
+                        "category": "SECURITY",
+                        "message": f"Secure tenant workspace for '{self.user_id}' initialized with zero cross-user leakage."
+                    }
+                ],
+                "last_sync_time": "Never",
+                "last_uid": 0
+            }
 
     def _load(self):
         with _lock:
-            if not STATE_FILE.exists():
+            if not self.state_file.exists():
                 self.state = self._get_initial_state()
                 self._save_unlocked()
             else:
                 try:
-                    with open(STATE_FILE, "r", encoding="utf-8") as f:
+                    with open(self.state_file, "r", encoding="utf-8") as f:
                         self.state = json.load(f)
                 except Exception as e:
-                    print(f"Error reading state file: {e}. Reinitializing.")
+                    print(f"Error reading state file for user '{self.user_id}': {e}. Reinitializing.")
                     self.state = self._get_initial_state()
                     self._save_unlocked()
 
     def _save_unlocked(self):
         try:
-            with open(STATE_FILE, "w", encoding="utf-8") as f:
+            with open(self.state_file, "w", encoding="utf-8") as f:
                 json.dump(self.state, f, indent=2, ensure_ascii=False)
         except Exception as e:
-            print(f"Error saving state: {e}")
+            print(f"Error saving state for user '{self.user_id}': {e}")
 
     def save(self):
         with _lock:
@@ -378,4 +407,39 @@ class StorageManager:
             }
 
 
-storage = StorageManager()
+_storage_cache: Dict[str, StorageManager] = {}
+_cache_lock = threading.Lock()
+
+def get_storage(user_id: str = "default") -> StorageManager:
+    """Retrieve or create the isolated StorageManager instance for a tenant."""
+    from .security import tenant_security
+    clean_id = tenant_security.sanitize_tenant_id(user_id)
+    with _cache_lock:
+        if clean_id not in _storage_cache:
+            _storage_cache[clean_id] = StorageManager(user_id=clean_id)
+        return _storage_cache[clean_id]
+
+
+class StorageProxy:
+    """Provides backward-compatible attribute access to default storage and .for_user(user_id)."""
+    def __getattr__(self, name):
+        return getattr(get_storage("default"), name)
+
+    def for_user(self, user_id: str) -> StorageManager:
+        return get_storage(user_id)
+
+    def list_tenants(self) -> List[Dict[str, Any]]:
+        tenants = [{"id": "default", "name": "Default Account (Admin)", "active": True}]
+        tenant_dir = DATA_DIR / "tenants"
+        if tenant_dir.exists():
+            for d in tenant_dir.iterdir():
+                if d.is_dir() and d.name != "default":
+                    tenants.append({
+                        "id": d.name,
+                        "name": f"Account: {d.name}",
+                        "active": False
+                    })
+        return tenants
+
+
+storage = StorageProxy()

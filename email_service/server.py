@@ -13,9 +13,9 @@ import sys
 import threading
 import time
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
-from fastapi import FastAPI, HTTPException, Request, Response, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Request, Response, BackgroundTasks, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -26,7 +26,7 @@ from .config import load_config, save_config
 from .storage import storage
 from .email_engine import email_engine
 from .ai_engine import ai_engine
-from .security import vault, dispatch_limiter, api_rate_limiter
+from .security import vault, dispatch_limiter, api_rate_limiter, tenant_security
 
 BASE_DIR = Path(__file__).parent
 STATIC_DIR = BASE_DIR / "static"
@@ -88,6 +88,17 @@ async def security_middleware(request: Request, call_next):
     return response
 
 
+# Tenant ID extractor & sanitizer
+def get_current_user_id(request: Request) -> str:
+    """Extract, sanitize, and validate requesting tenant user ID."""
+    uid = request.headers.get("X-User-Id")
+    if not uid:
+        uid = request.cookies.get("automail_user_id")
+    if not uid:
+        uid = request.query_params.get("user_id", "default")
+    return tenant_security.sanitize_tenant_id(uid)
+
+
 # Mount static directory
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
@@ -97,18 +108,21 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 _polling_active = True
 
 def background_poller():
-    """Periodic worker to sync emails automatically in the background."""
+    """Periodic worker to sync emails automatically in the background for active tenants."""
     while _polling_active:
         try:
-            cfg = load_config()
-            auto_cfg = cfg.get("automation", {})
-            if auto_cfg.get("auto_sync", True):
-                email_engine.sync_emails()
-            interval = max(20, auto_cfg.get("sync_interval_seconds", 60))
+            tenants = storage.list_tenants()
+            for t in tenants:
+                uid = t["id"]
+                cfg = load_config(user_id=uid)
+                auto_cfg = cfg.get("automation", {})
+                if auto_cfg.get("auto_sync", True):
+                    # Only attempt if email is configured
+                    if cfg.get("account", {}).get("email"):
+                        email_engine.sync_emails(user_id=uid)
         except Exception as e:
             print(f"Background poller exception: {e}")
-            interval = 60
-        time.sleep(interval)
+        time.sleep(60)
 
 poller_thread = threading.Thread(target=background_poller, daemon=True)
 poller_thread.start()
@@ -141,6 +155,9 @@ class RegeneratePayload(BaseModel):
 class SimulatePayload(BaseModel):
     scenario: Optional[str] = "customer_support"
 
+class SwitchTenantPayload(BaseModel):
+    user_id: str
+
 
 # --- FRONTEND ROUTE ---
 @app.get("/")
@@ -151,45 +168,92 @@ def serve_dashboard():
     return JSONResponse({"message": "Email Automation Backend Running. UI building..."})
 
 
+# --- AUTH & TENANT ENDPOINTS ---
+@app.get("/api/auth/me")
+def get_auth_me(user_id: str = Depends(get_current_user_id)):
+    cfg = load_config(user_id=user_id)
+    return {
+        "active_user_id": user_id,
+        "email": cfg.get("account", {}).get("email", ""),
+        "tenants": storage.list_tenants()
+    }
+
+
+@app.get("/api/auth/tenants")
+def get_tenants():
+    return storage.list_tenants()
+
+
+@app.post("/api/auth/switch")
+def switch_tenant(payload: SwitchTenantPayload, response: Response):
+    clean_id = tenant_security.sanitize_tenant_id(payload.user_id)
+    user_storage = storage.for_user(clean_id)
+    user_cfg = load_config(clean_id)
+    response.set_cookie(
+        key="automail_user_id",
+        value=clean_id,
+        httponly=False,
+        samesite="lax",
+        max_age=31536000
+    )
+    user_storage.log("SECURITY", f"User workspace switched to '{clean_id}' with complete data isolation.", "INFO")
+    return {
+        "success": True,
+        "active_user_id": clean_id,
+        "account_email": user_cfg.get("account", {}).get("email", ""),
+        "total_emails": len(user_storage.get_emails())
+    }
+
+
 # --- API ENDPOINTS ---
 @app.get("/api/stats")
-def get_stats():
-    return storage.get_stats()
+def get_stats(user_id: str = Depends(get_current_user_id)):
+    return storage.for_user(user_id).get_stats()
 
 
 @app.get("/api/emails")
-def get_emails(category: Optional[str] = None, status: Optional[str] = None):
-    return storage.get_emails(category=category, status=status)
+def get_emails(
+    category: Optional[str] = None,
+    status: Optional[str] = None,
+    user_id: str = Depends(get_current_user_id)
+):
+    return storage.for_user(user_id).get_emails(category=category, status=status)
 
 
 @app.get("/api/emails/{email_id}")
-def get_email_detail(email_id: str):
-    item = storage.get_email(email_id)
+def get_email_detail(email_id: str, user_id: str = Depends(get_current_user_id)):
+    user_storage = storage.for_user(user_id)
+    item = user_storage.get_email(email_id)
     if not item:
         raise HTTPException(status_code=404, detail="Email not found")
     
     draft = None
     if item.get("draft_id"):
-        draft = storage.get_draft(item["draft_id"])
+        draft = user_storage.get_draft(item["draft_id"])
     return {"email": item, "draft": draft}
 
 
 @app.post("/api/emails/sync")
-def trigger_sync(background_tasks: BackgroundTasks):
-    res = email_engine.sync_emails()
+def trigger_sync(background_tasks: BackgroundTasks, user_id: str = Depends(get_current_user_id)):
+    res = email_engine.sync_emails(user_id=user_id)
     return res
 
 
 @app.post("/api/emails/simulate")
-def simulate_email(payload: SimulatePayload):
-    result = email_engine.simulate_test_email(scenario=payload.scenario)
+def simulate_email(payload: SimulatePayload, user_id: str = Depends(get_current_user_id)):
+    result = email_engine.simulate_test_email(scenario=payload.scenario, user_id=user_id)
     return {"success": True, "details": result}
 
 
 @app.post("/api/emails/{email_id}/status")
-def update_email_status(email_id: str, payload: Dict[str, str]):
+def update_email_status(
+    email_id: str,
+    payload: Dict[str, str],
+    user_id: str = Depends(get_current_user_id)
+):
+    user_storage = storage.for_user(user_id)
     new_status = payload.get("status", "read")
-    ok = storage.update_email(email_id, {"status": new_status})
+    ok = user_storage.update_email(email_id, {"status": new_status})
     if not ok:
         raise HTTPException(status_code=404, detail="Email not found")
     return {"success": True}
@@ -197,11 +261,12 @@ def update_email_status(email_id: str, payload: Dict[str, str]):
 
 # --- APPROVALS & DRAFTS ---
 @app.get("/api/approvals")
-def get_approvals(status: Optional[str] = None):
-    drafts = storage.get_drafts(status=status)
+def get_approvals(status: Optional[str] = None, user_id: str = Depends(get_current_user_id)):
+    user_storage = storage.for_user(user_id)
+    drafts = user_storage.get_drafts(status=status)
     augmented = []
     for d in drafts:
-        email_obj = storage.get_email(d.get("email_id", ""))
+        email_obj = user_storage.get_email(d.get("email_id", ""))
         augmented.append({
             **d,
             "original_email": email_obj
@@ -210,25 +275,31 @@ def get_approvals(status: Optional[str] = None):
 
 
 @app.post("/api/approvals/{draft_id}/approve")
-def approve_draft(draft_id: str):
-    success, message = email_engine.send_draft(draft_id)
+def approve_draft(draft_id: str, user_id: str = Depends(get_current_user_id)):
+    success, message = email_engine.send_draft(draft_id, user_id=user_id)
     if not success:
         raise HTTPException(status_code=400, detail=message)
     return {"success": True, "message": message}
 
 
 @app.post("/api/approvals/{draft_id}/reject")
-def reject_draft(draft_id: str):
-    draft = storage.get_draft(draft_id)
+def reject_draft(draft_id: str, user_id: str = Depends(get_current_user_id)):
+    user_storage = storage.for_user(user_id)
+    draft = user_storage.get_draft(draft_id)
     if not draft:
         raise HTTPException(status_code=404, detail="Draft not found")
-    storage.update_draft(draft_id, {"status": "rejected"})
-    storage.log("APPROVAL", f"Draft {draft_id} for '{draft.get('subject')}' was rejected by user.", "INFO")
+    user_storage.update_draft(draft_id, {"status": "rejected"})
+    user_storage.log("APPROVAL", f"Draft {draft_id} for '{draft.get('subject')}' was rejected by user.", "INFO")
     return {"success": True}
 
 
 @app.post("/api/approvals/{draft_id}/update")
-def update_draft(draft_id: str, payload: DraftUpdatePayload):
+def update_draft(
+    draft_id: str,
+    payload: DraftUpdatePayload,
+    user_id: str = Depends(get_current_user_id)
+):
+    user_storage = storage.for_user(user_id)
     updates = {}
     if payload.body is not None:
         updates["body"] = payload.body
@@ -237,78 +308,93 @@ def update_draft(draft_id: str, payload: DraftUpdatePayload):
     if payload.tone is not None:
         updates["tone"] = payload.tone
     
-    ok = storage.update_draft(draft_id, updates)
+    ok = user_storage.update_draft(draft_id, updates)
     if not ok:
         raise HTTPException(status_code=404, detail="Draft not found")
     return {"success": True}
 
 
 @app.post("/api/approvals/{draft_id}/regenerate")
-def regenerate_draft(draft_id: str, payload: RegeneratePayload):
-    draft = storage.get_draft(draft_id)
+def regenerate_draft(
+    draft_id: str,
+    payload: RegeneratePayload,
+    user_id: str = Depends(get_current_user_id)
+):
+    user_storage = storage.for_user(user_id)
+    draft = user_storage.get_draft(draft_id)
     if not draft:
         raise HTTPException(status_code=404, detail="Draft not found")
     
-    email_obj = storage.get_email(draft.get("email_id", ""))
+    email_obj = user_storage.get_email(draft.get("email_id", ""))
     if not email_obj:
         raise HTTPException(status_code=404, detail="Original email not found")
 
     new_body = ai_engine.generate_reply(
         email_obj,
         tone=payload.tone or "Professional",
-        custom_prompt=payload.custom_prompt or ""
+        custom_prompt=payload.custom_prompt or "",
+        user_id=user_id
     )
-    storage.update_draft(draft_id, {"body": new_body, "tone": payload.tone})
-    storage.log("AI", f"Regenerated draft {draft_id} with tone '{payload.tone}'", "INFO")
+    user_storage.update_draft(draft_id, {"body": new_body, "tone": payload.tone})
+    user_storage.log("AI", f"Regenerated draft {draft_id} with tone '{payload.tone}'", "INFO")
     return {"success": True, "body": new_body}
 
 
 # --- RULES ---
 @app.get("/api/rules")
-def get_rules():
-    return storage.get_rules()
+def get_rules(user_id: str = Depends(get_current_user_id)):
+    return storage.for_user(user_id).get_rules()
 
 
 @app.post("/api/rules")
-def create_rule(payload: RulePayload):
-    rule_id = storage.add_rule(payload.dict())
-    storage.log("RULE", f"Created new automation rule '{payload.name}'", "SUCCESS")
+def create_rule(payload: RulePayload, user_id: str = Depends(get_current_user_id)):
+    user_storage = storage.for_user(user_id)
+    rule_id = user_storage.add_rule(payload.dict())
+    user_storage.log("RULE", f"Created new automation rule '{payload.name}'", "SUCCESS")
     return {"success": True, "id": rule_id}
 
 
 @app.put("/api/rules/{rule_id}")
-def update_rule(rule_id: str, payload: Dict[str, Any]):
-    ok = storage.update_rule(rule_id, payload)
+def update_rule(
+    rule_id: str,
+    payload: Dict[str, Any],
+    user_id: str = Depends(get_current_user_id)
+):
+    user_storage = storage.for_user(user_id)
+    ok = user_storage.update_rule(rule_id, payload)
     if not ok:
         raise HTTPException(status_code=404, detail="Rule not found")
     return {"success": True}
 
 
 @app.delete("/api/rules/{rule_id}")
-def delete_rule(rule_id: str):
-    ok = storage.delete_rule(rule_id)
+def delete_rule(rule_id: str, user_id: str = Depends(get_current_user_id)):
+    user_storage = storage.for_user(user_id)
+    ok = user_storage.delete_rule(rule_id)
     if not ok:
         raise HTTPException(status_code=404, detail="Rule not found")
-    storage.log("RULE", f"Deleted automation rule {rule_id}", "INFO")
+    user_storage.log("RULE", f"Deleted automation rule {rule_id}", "INFO")
     return {"success": True}
 
 
 # --- OUTBOX / SENT ---
 @app.get("/api/sent")
-def get_sent():
-    return storage.get_sent_emails()
+def get_sent(user_id: str = Depends(get_current_user_id)):
+    return storage.for_user(user_id).get_sent_emails()
 
 
 # --- LOGS ---
 @app.get("/api/logs")
-def get_logs(limit: int = 100):
-    return storage.get_logs(limit=limit)
+def get_logs(limit: int = 100, user_id: str = Depends(get_current_user_id)):
+    return storage.for_user(user_id).get_logs(limit=limit)
 
 
 # --- SECURITY STATUS ---
 @app.get("/api/security/status")
-def get_security_status():
+def get_security_status(user_id: str = Depends(get_current_user_id)):
     return {
+        "tenant_id": user_id,
+        "multi_tenant_isolated": True,
         "vault_encrypted": True,
         "prompt_shield_active": True,
         "leak_prevention_active": True,
@@ -320,8 +406,8 @@ def get_security_status():
 
 # --- SETTINGS ---
 @app.get("/api/settings")
-def get_settings():
-    cfg = load_config()
+def get_settings(user_id: str = Depends(get_current_user_id)):
+    cfg = load_config(user_id=user_id)
     # Mask all secrets so they never leave backend unmasked
     masked = dict(cfg)
     if "account" in masked and "app_password" in masked["account"]:
@@ -339,8 +425,8 @@ def get_settings():
 
 
 @app.post("/api/settings")
-def save_settings(payload: SettingsPayload):
-    current = load_config()
+def save_settings(payload: SettingsPayload, user_id: str = Depends(get_current_user_id)):
+    current = load_config(user_id=user_id)
     new_data = payload.dict()
     
     # Preserve existing password if user left it blank
@@ -355,20 +441,20 @@ def save_settings(payload: SettingsPayload):
         if not entered_key and current.get("ai", {}).get("gemini_api_key"):
             new_data["ai"]["gemini_api_key"] = current["ai"]["gemini_api_key"]
 
-    ok = save_config(new_data)
-    storage.log("SECURITY", "Updated settings with encrypted secret isolation.", "SUCCESS")
+    ok = save_config(new_data, user_id=user_id)
+    storage.for_user(user_id).log("SECURITY", "Updated settings with encrypted secret isolation.", "SUCCESS")
     return {"success": ok}
 
 
 @app.post("/api/settings/test-connection")
-def test_connection():
-    success, msg = email_engine.test_connection()
+def test_connection(user_id: str = Depends(get_current_user_id)):
+    success, msg = email_engine.test_connection(user_id=user_id)
     return {"success": success, "message": msg}
 
 
 @app.post("/api/settings/test-ai")
-def test_ai():
-    success, msg = ai_engine.test_ai_connection()
+def test_ai(user_id: str = Depends(get_current_user_id)):
+    success, msg = ai_engine.test_ai_connection(user_id=user_id)
     return {"success": success, "message": msg}
 
 

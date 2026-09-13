@@ -47,16 +47,28 @@ DEFAULT_CONFIG: Dict[str, Any] = {
 }
 
 
-def load_config() -> Dict[str, Any]:
-    """Load configuration from disk, decrypting sensitive secrets."""
+def get_tenant_config_path(user_id: str = "default") -> Path:
+    """Resolve isolated configuration file path for the given tenant."""
+    from .security import tenant_security
+    clean_id = tenant_security.sanitize_tenant_id(user_id)
+    if clean_id == "default":
+        return CONFIG_FILE
+    tenant_dir = DATA_DIR / "tenants" / clean_id
+    tenant_dir.mkdir(parents=True, exist_ok=True)
+    return tenant_dir / "config.json"
+
+
+def load_config(user_id: str = "default") -> Dict[str, Any]:
+    """Load configuration from disk for a specific tenant, decrypting sensitive secrets."""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
+    config_path = get_tenant_config_path(user_id)
     
-    if not CONFIG_FILE.exists():
-        save_config(DEFAULT_CONFIG)
+    if not config_path.exists():
+        save_config(DEFAULT_CONFIG, user_id=user_id)
         return DEFAULT_CONFIG.copy()
         
     try:
-        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+        with open(config_path, "r", encoding="utf-8") as f:
             data = json.load(f)
             merged = DEFAULT_CONFIG.copy()
             for k, v in data.items():
@@ -76,28 +88,30 @@ def load_config() -> Dict[str, Any]:
                 if raw_key and raw_key.startswith("ENC::"):
                     merged["ai"]["gemini_api_key"] = vault.decrypt(raw_key)
 
-            # Environment variable overrides
-            env_user = os.getenv("GMAIL_USER") or os.getenv("GMAIL_ADDRESS")
-            if env_user:
-                merged["account"]["email_address"] = env_user
+            # Environment variable overrides (only apply to default tenant)
+            if user_id == "default":
+                env_user = os.getenv("GMAIL_USER") or os.getenv("GMAIL_ADDRESS")
+                if env_user:
+                    merged["account"]["email_address"] = env_user
 
-            env_pwd = os.getenv("GMAIL_APP_PASSWORD") or os.getenv("GMAIL_PASSWORD")
-            if env_pwd:
-                merged["account"]["app_password"] = env_pwd
+                env_pwd = os.getenv("GMAIL_APP_PASSWORD") or os.getenv("GMAIL_PASSWORD")
+                if env_pwd:
+                    merged["account"]["app_password"] = env_pwd
 
-            env_gemini = os.getenv("GEMINI_API_KEY")
-            if env_gemini:
-                merged["ai"]["gemini_api_key"] = env_gemini
+                env_gemini = os.getenv("GEMINI_API_KEY")
+                if env_gemini:
+                    merged["ai"]["gemini_api_key"] = env_gemini
 
             return merged
     except Exception as e:
-        print(f"Error reading config: {e}. Using defaults.")
+        print(f"Error reading config for user '{user_id}': {e}. Using defaults.")
         return DEFAULT_CONFIG.copy()
 
 
-def save_config(new_config: Dict[str, Any]) -> bool:
-    """Save configuration to disk with encrypted secrets."""
+def save_config(new_config: Dict[str, Any], user_id: str = "default") -> bool:
+    """Save configuration to disk with encrypted secrets for a specific tenant."""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
+    config_path = get_tenant_config_path(user_id)
     try:
         to_save = json.loads(json.dumps(new_config))  # deep copy
         
@@ -113,9 +127,9 @@ def save_config(new_config: Dict[str, Any]) -> bool:
             if key and not key.startswith("ENC::"):
                 to_save["ai"]["gemini_api_key"] = vault.encrypt(key)
 
-        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+        with open(config_path, "w", encoding="utf-8") as f:
             json.dump(to_save, f, indent=2, ensure_ascii=False)
         return True
     except Exception as e:
-        print(f"Error saving config: {e}")
+        print(f"Error saving config for user '{user_id}': {e}")
         return False

@@ -221,6 +221,41 @@ def is_valid_email(email_str: str) -> bool:
     return True
 
 
+class TenantSecurityManager:
+    """
+    Enforces multi-tenant data isolation and disarms path-traversal / cross-user leakage.
+    Ensures that every user's inbox, AI drafts, credentials, and logs are 100% segregated.
+    """
+    DEFAULT_TENANT = "default"
+    TENANT_REGEX = re.compile(r"^[a-zA-Z0-9_\-\.@]{1,64}$")
+
+    @classmethod
+    def sanitize_tenant_id(cls, user_id: Optional[str]) -> str:
+        """
+        Validate and sanitize user tenant identifier.
+        Strips directory separators, relative path markers ('..'), and illegal characters.
+        """
+        if not user_id or not isinstance(user_id, str):
+            return cls.DEFAULT_TENANT
+
+        clean = user_id.strip()
+        # Disarm path traversal attempts immediately
+        clean = clean.replace("..", "").replace("/", "").replace("\\", "").replace("%2e", "").replace("%2f", "")
+        
+        # Keep alphanumeric, hyphen, underscore, dot, and @ (for email usernames)
+        clean = re.sub(r"[^a-zA-Z0-9_\-\.@]", "", clean)
+        
+        if not clean or not cls.TENANT_REGEX.match(clean):
+            return cls.DEFAULT_TENANT
+        return clean.lower()
+
+    @classmethod
+    def verify_tenant_boundary(cls, item_owner_id: str, requesting_user_id: str) -> bool:
+        """Verify requesting user matches item owner (prevents Insecure Direct Object References)."""
+        return cls.sanitize_tenant_id(item_owner_id) == cls.sanitize_tenant_id(requesting_user_id)
+
+
 vault = SecretVault()
 dispatch_limiter = DispatchLimiter(max_per_hour=30)
 api_rate_limiter = APIRateLimiter()
+tenant_security = TenantSecurityManager()

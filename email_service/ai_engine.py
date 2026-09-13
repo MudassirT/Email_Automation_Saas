@@ -50,7 +50,7 @@ class AIEngine:
     def __init__(self):
         pass
 
-    def analyze_email(self, email_data: Dict[str, Any]) -> Dict[str, Any]:
+    def analyze_email(self, email_data: Dict[str, Any], user_id: str = "default") -> Dict[str, Any]:
         """
         Analyze email subject & body:
         Includes pre-flight prompt injection defense, simplified owner briefing,
@@ -63,7 +63,7 @@ class AIEngine:
         # 1. Prompt Injection Security Check
         is_injection, matched_pattern = PromptShield.detect_injection(f"{subject} {body}")
         if is_injection:
-            storage.log(
+            storage.for_user(user_id).log(
                 "SECURITY",
                 f"BLOCKED Prompt Injection attack from {email_data.get('from')}: matched '{matched_pattern}'",
                 "WARNING",
@@ -84,7 +84,7 @@ class AIEngine:
             }
 
         # 2. Proceed with AI analysis (Gemini or Built-in)
-        cfg = load_config()
+        cfg = load_config(user_id=user_id)
         ai_cfg = cfg.get("ai", {})
         api_key = ai_cfg.get("gemini_api_key", "").strip()
 
@@ -94,11 +94,11 @@ class AIEngine:
                 if result:
                     return result
             except Exception as e:
-                storage.log("AI", f"Gemini analysis failed: {e}. Falling back to smart built-in engine.", "WARNING")
+                storage.for_user(user_id).log("AI", f"Gemini analysis failed: {e}. Falling back to smart built-in engine.", "WARNING")
 
         return self._analyze_built_in(email_data)
 
-    def generate_reply(self, email_data: Dict[str, Any], tone: str = "Professional", custom_prompt: str = "") -> str:
+    def generate_reply(self, email_data: Dict[str, Any], tone: str = "Professional", custom_prompt: str = "", user_id: str = "default") -> str:
         """
         Generate a contextual reply draft.
         Enforces outgoing sensitive credential leakage prevention.
@@ -107,7 +107,7 @@ class AIEngine:
         if email_data.get("category") == "Security Alert (Injection Blocked)":
             return "Automated drafting disabled for this email due to detected adversarial prompt injection."
 
-        cfg = load_config()
+        cfg = load_config(user_id=user_id)
         ai_cfg = cfg.get("ai", {})
         api_key = ai_cfg.get("gemini_api_key", "").strip()
         system_instructions = ai_cfg.get("system_instructions", "")
@@ -119,7 +119,7 @@ class AIEngine:
                     email_data, tone, custom_prompt, system_instructions, api_key, ai_cfg.get("model_name", "gemini-1.5-flash")
                 )
             except Exception as e:
-                storage.log("AI", f"Gemini draft generation failed: {e}. Falling back to smart built-in engine.", "WARNING")
+                storage.for_user(user_id).log("AI", f"Gemini draft generation failed: {e}. Falling back to smart built-in engine.", "WARNING")
 
         if not draft:
             draft = self._generate_reply_built_in(email_data, tone)
@@ -127,7 +127,7 @@ class AIEngine:
         # 3. Post-generation Data Leakage Inspection
         has_leak, leak_desc = DataLeakPreventer.scan_for_leaks(draft)
         if has_leak:
-            storage.log("SECURITY", f"Sensitive data pattern '{leak_desc}' detected in draft reply! Redacting.", "WARNING")
+            storage.for_user(user_id).log("SECURITY", f"Sensitive data pattern '{leak_desc}' detected in draft reply! Redacting.", "WARNING")
             draft = DataLeakPreventer.sanitize_outgoing(draft)
 
         return draft
@@ -391,9 +391,9 @@ Draft a clear, comprehensive email response that addresses each question or task
                 f"Team"
             )
 
-    def test_ai_connection(self) -> Tuple[bool, str]:
-        """Verify AI connectivity and API key validity."""
-        cfg = load_config()
+    def test_ai_connection(self, user_id: str = "default") -> Tuple[bool, str]:
+        """Verify AI connectivity and API key validity for a tenant."""
+        cfg = load_config(user_id=user_id)
         ai_cfg = cfg.get("ai", {})
         provider = ai_cfg.get("provider", "gemini")
         api_key = ai_cfg.get("gemini_api_key", "").strip()

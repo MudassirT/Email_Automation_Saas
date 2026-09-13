@@ -1428,3 +1428,214 @@ input:checked + .slider:before {
   transform: translateY(-1px);
   box-shadow: 0 6px 20px rgba(99, 102, 241, 0.55);
 }
+
+/* User Workspace Switcher Pill in Topbar */
+.user-switcher-pill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.user-switcher-pill:hover {
+  background: var(--bg-glass-hover);
+  border-color: var(--border-active);
+  box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
+}
+
+.user-switcher-pill svg {
+  color: var(--accent-primary);
+}
+
+.user-switcher-pill .pill-caret {
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  margin-left: 2px;
+}
+
+/* Zero Cross-User Exposure Security Guarantee Banner */
+.security-guarantee-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(99, 102, 241, 0.05));
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.15);
+}
+
+.sec-badge-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--accent-emerald);
+  flex-shrink: 0;
+}
+
+.sec-badge-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sec-badge-title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--accent-emerald);
+}
+
+.sec-badge-desc {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* 1-Click Provider Presets */
+.provider-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.provider-preset-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--transition-fast);
+}
+
+.provider-preset-btn:hover {
+  background: var(--bg-glass-hover);
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+.provider-preset-btn.active {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.25);
+}
+
+.preset-badge-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.preset-badge-text {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.preset-badge-text strong {
+  font-size: 0.8rem;
+  color: var(--text-main);
+  line-height: 1.2;
+}
+
+.preset-badge-text small {
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  line-height: 1.2;
+}
+
+/* App Password 3-Step Guide */
+.app-password-guide-box {
+  background: rgba(99, 102, 241, 0.06);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-bottom: 14px;
+}
+
+.guide-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent-primary);
+  margin-bottom: 6px;
+}
+
+.guide-step-list {
+  padding-left: 18px;
+  margin: 0;
+  font-size: 0.77rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.guide-step-list li {
+  margin-bottom: 3px;
+}
+
+/* Tenant Switcher Modal Cards */
+.tenant-list-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.tenant-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.tenant-card:hover {
+  background: var(--bg-glass-hover);
+  border-color: var(--border-active);
+}
+
+.tenant-card.active {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: var(--accent-emerald);
+}
+
+.tenant-card-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tenant-card-name {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.tenant-card-sub {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}

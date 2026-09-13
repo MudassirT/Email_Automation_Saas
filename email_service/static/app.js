@@ -5,13 +5,20 @@
  */
 
 // Security: Global Anti-CSRF header injector for mutating requests
+// Security: Global Anti-CSRF and Multi-Tenant Isolation header injector
 const _origFetch = window.fetch;
 window.fetch = function(url, options = {}) {
   options.headers = options.headers || {};
-  if (options.method && options.method !== "GET") {
-    if (typeof options.headers.set === "function") {
+  const currentUserId = localStorage.getItem("automail_user_id") || "default";
+
+  if (typeof options.headers.set === "function") {
+    options.headers.set("X-User-Id", currentUserId);
+    if (options.method && options.method !== "GET") {
       options.headers.set("X-Requested-With", "AutoMail");
-    } else {
+    }
+  } else {
+    options.headers["X-User-Id"] = currentUserId;
+    if (options.method && options.method !== "GET") {
       options.headers["X-Requested-With"] = "AutoMail";
     }
   }
@@ -29,6 +36,8 @@ document.addEventListener("DOMContentLoaded", () => {
   initNav();
   initModals();
   initActions();
+  initUserSwitcher();
+  initProviderPresets();
   loadAllData();
 
   // Auto-refresh interval (every 12 seconds)
@@ -206,7 +215,12 @@ function initActions() {
 function initModals() {
   window.openModal = function(modalId) {
     const el = document.getElementById(modalId);
-    if (el) el.classList.add("open");
+    if (el) {
+      el.classList.add("open");
+      if (modalId === "modal-switch-user") {
+        renderTenantList();
+      }
+    }
   };
   window.closeModal = function(modalId) {
     const el = document.getElementById(modalId);
@@ -849,6 +863,183 @@ async function loadLogs() {
   }
 }
 
+// --- PROVIDER PRESETS ---
+const PROVIDER_PRESETS = {
+  gmail: {
+    name: "Google Gmail",
+    imap: "imap.gmail.com",
+    imap_port: 993,
+    smtp: "smtp.gmail.com",
+    smtp_port: 587,
+    guideTitle: "Easy 3-Step Gmail Connection:",
+    steps: [
+      "Make sure <strong>2-Step Verification</strong> is ON in your Google Account &gt; Security.",
+      'Visit <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener" style="color: var(--accent-primary); text-decoration: underline;">Google App Passwords</a> and generate a 16-letter password for <em>"AutoMail"</em>.',
+      "Enter your email and paste the App Password below. It is encrypted on disk immediately."
+    ]
+  },
+  outlook: {
+    name: "Microsoft Outlook / Office 365",
+    imap: "outlook.office365.com",
+    imap_port: 993,
+    smtp: "smtp.office365.com",
+    smtp_port: 587,
+    guideTitle: "Easy 3-Step Outlook / O365 Connection:",
+    steps: [
+      "Ensure IMAP access is enabled in your Outlook / Office 365 mailbox settings.",
+      "If 2-Step Verification is active, generate an App Password in your Microsoft Account Security.",
+      "Enter your Outlook email and password below. Encrypted with AES-256 Fernet keys."
+    ]
+  },
+  yahoo: {
+    name: "Yahoo Mail",
+    imap: "imap.mail.yahoo.com",
+    imap_port: 993,
+    smtp: "smtp.mail.yahoo.com",
+    smtp_port: 587,
+    guideTitle: "Easy 3-Step Yahoo Mail Connection:",
+    steps: [
+      "Go to Yahoo Account Security &gt; Generate App Password.",
+      'Create an App Password labeled <em>"AutoMail"</em> and copy it.',
+      "Paste your Yahoo email and App Password below. End-to-end isolated."
+    ]
+  },
+  custom: {
+    name: "Custom Mail Server",
+    imap: "",
+    imap_port: 993,
+    smtp: "",
+    smtp_port: 587,
+    guideTitle: "Custom IMAP / SMTP Connection:",
+    steps: [
+      "Enter your email provider's IMAP & SMTP host addresses and port numbers.",
+      "Standard secure ports are Port 993 (SSL/TLS) for IMAP and Port 587 (STARTTLS) for SMTP.",
+      "Input your credentials. All secrets are stored exclusively in your private tenant partition."
+    ]
+  }
+};
+
+function initProviderPresets() {
+  document.querySelectorAll(".provider-preset-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const provider = btn.getAttribute("data-provider");
+      if (provider) selectProviderPreset(provider, true);
+    });
+  });
+}
+
+function selectProviderPreset(providerKey, overwriteValues = true) {
+  const preset = PROVIDER_PRESETS[providerKey] || PROVIDER_PRESETS.gmail;
+
+  document.querySelectorAll(".provider-preset-btn").forEach(b => {
+    b.classList.toggle("active", b.getAttribute("data-provider") === providerKey);
+  });
+
+  if (overwriteValues) {
+    if (preset.imap) document.getElementById("setting-imap").value = preset.imap;
+    document.getElementById("setting-imap-port").value = preset.imap_port;
+    if (preset.smtp) document.getElementById("setting-smtp").value = preset.smtp;
+    document.getElementById("setting-smtp-port").value = preset.smtp_port;
+  }
+
+  const titleEl = document.getElementById("guide-header-title");
+  if (titleEl) titleEl.textContent = preset.guideTitle;
+
+  const listEl = document.getElementById("guide-step-list");
+  if (listEl && preset.steps) {
+    listEl.innerHTML = preset.steps.map(s => `<li>${s}</li>`).join("");
+  }
+}
+
+// --- USER / MULTI-TENANT WORKSPACE SWITCHER ---
+async function initUserSwitcher() {
+  const pill = document.getElementById("user-switcher-pill");
+  if (pill) {
+    pill.addEventListener("click", () => openModal("modal-switch-user"));
+  }
+
+  const confirmBtn = document.getElementById("btn-confirm-switch-user");
+  if (confirmBtn) {
+    confirmBtn.addEventListener("click", () => {
+      const input = document.getElementById("input-new-user-id");
+      const uid = input?.value.trim();
+      if (!uid) {
+        showToast("Please enter a User ID", "warning");
+        return;
+      }
+      switchTenant(uid);
+    });
+  }
+
+  updateActiveUserBadge();
+}
+
+function updateActiveUserBadge() {
+  const currentUserId = localStorage.getItem("automail_user_id") || "default";
+  const badge = document.getElementById("current-user-badge");
+  if (badge) {
+    badge.textContent = `User: ${currentUserId}`;
+  }
+}
+
+async function renderTenantList() {
+  const container = document.getElementById("tenant-list-container");
+  if (!container) return;
+
+  try {
+    const res = await fetch("/api/auth/tenants");
+    const tenants = await res.json();
+    const activeUserId = localStorage.getItem("automail_user_id") || "default";
+
+    container.innerHTML = tenants.map(t => {
+      const isActive = t.id === activeUserId;
+      return `
+        <div class="tenant-card ${isActive ? 'active' : ''}" onclick="switchTenant('${escapeHtml(t.id)}')">
+          <div class="tenant-card-info">
+            <span style="font-size: 1.1rem;">${isActive ? '✅' : '🏢'}</span>
+            <div>
+              <div class="tenant-card-name">${escapeHtml(t.name || t.id)}</div>
+              <div class="tenant-card-sub">User ID: ${escapeHtml(t.id)} ${isActive ? '• Active Workspace' : ''}</div>
+            </div>
+          </div>
+          <button class="btn btn-sm ${isActive ? 'btn-success' : 'btn-secondary'}">
+            ${isActive ? 'Active' : 'Switch'}
+          </button>
+        </div>
+      `;
+    }).join("");
+  } catch (e) {
+    container.innerHTML = `<div style="color: var(--text-dim); font-size: 0.8rem;">Failed to load accounts: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+async function switchTenant(newUserId) {
+  try {
+    const res = await fetch("/api/auth/switch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: newUserId })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      const activeId = data.active_user_id;
+      localStorage.setItem("automail_user_id", activeId);
+      closeModal("modal-switch-user");
+      updateActiveUserBadge();
+      showToast(`Switched to workspace '${activeId}' (Zero Cross-Exposure)`, "success");
+      
+      // Clear selection and reload all data for new isolated workspace
+      selectedEmailId = null;
+      await loadAllData(false);
+      await loadSettings();
+    } else {
+      showToast("Failed to switch workspace", "error");
+    }
+  } catch (e) {
+    showToast("Switch workspace error: " + e.message, "error");
+  }
+}
+
 // 7. SETTINGS VIEW
 async function loadSettings() {
   try {
@@ -869,6 +1060,20 @@ async function loadSettings() {
     document.getElementById("setting-imap-port").value = acc.imap_port || 993;
     document.getElementById("setting-smtp").value = acc.smtp_server || "smtp.gmail.com";
     document.getElementById("setting-smtp-port").value = acc.smtp_port || 587;
+
+    // Detect and select corresponding provider preset
+    const imapLower = (acc.imap_server || "").toLowerCase();
+    if (imapLower.includes("gmail")) {
+      selectProviderPreset("gmail", false);
+    } else if (imapLower.includes("office365") || imapLower.includes("outlook")) {
+      selectProviderPreset("outlook", false);
+    } else if (imapLower.includes("yahoo")) {
+      selectProviderPreset("yahoo", false);
+    } else if (acc.imap_server) {
+      selectProviderPreset("custom", false);
+    } else {
+      selectProviderPreset("gmail", false);
+    }
 
     document.getElementById("setting-ai-provider").value = ai.provider || "gemini";
     document.getElementById("setting-gemini-key").value = "";

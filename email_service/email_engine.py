@@ -80,9 +80,9 @@ class EmailEngine:
     def __init__(self):
         pass
 
-    def test_connection(self) -> Tuple[bool, str]:
-        """Verify IMAP & SMTP credentials."""
-        cfg = load_config()
+    def test_connection(self, user_id: str = "default") -> Tuple[bool, str]:
+        """Verify IMAP & SMTP credentials for a tenant."""
+        cfg = load_config(user_id=user_id)
         acc = cfg.get("account", {})
         user = acc.get("email_address", "").strip()
         pwd = acc.get("app_password", "").strip()
@@ -113,15 +113,16 @@ class EmailEngine:
 
         return True, "Successfully authenticated with both IMAP (receive) and SMTP (send)!"
 
-    def sync_emails(self, max_fetch: int = 15) -> Dict[str, Any]:
-        """Fetch unread or latest emails via IMAP, analyze them, and trigger rules."""
-        cfg = load_config()
+    def sync_emails(self, max_fetch: int = 15, user_id: str = "default") -> Dict[str, Any]:
+        """Fetch unread or latest emails via IMAP, analyze them, and trigger rules for a tenant."""
+        cfg = load_config(user_id=user_id)
+        user_storage = storage.for_user(user_id)
         acc = cfg.get("account", {})
         user = acc.get("email_address", "").strip()
         pwd = acc.get("app_password", "").strip()
 
         if not user or not pwd:
-            storage.log("SYNC", "Sync skipped: Email credentials not configured yet. Using simulation mode.", "INFO")
+            user_storage.log("SYNC", "Sync skipped: Email credentials not configured yet. Using simulation mode.", "INFO")
             return {"status": "skipped", "message": "Email credentials not configured.", "count": 0}
 
         try:
@@ -139,7 +140,7 @@ class EmailEngine:
                 uids = messages[0].split()
 
             new_count = 0
-            existing_emails = storage.get_emails()
+            existing_emails = user_storage.get_emails()
             existing_uids = {e.get("uid") for e in existing_emails if e.get("uid")}
 
             for uid_bytes in uids[-max_fetch:]:
@@ -172,31 +173,32 @@ class EmailEngine:
                     "status": "unread"
                 }
 
-                # AI Analysis
-                analysis = ai_engine.analyze_email(email_obj)
+                # AI Analysis (tenant scoped)
+                analysis = ai_engine.analyze_email(email_obj, user_id=user_id)
                 email_obj.update(analysis)
 
-                email_id = storage.add_email(email_obj)
+                email_id = user_storage.add_email(email_obj)
                 new_count += 1
 
-                # Automation Rules Execution
-                self._apply_rules_to_email(email_obj, email_id, cfg)
+                # Automation Rules Execution (tenant scoped)
+                self._apply_rules_to_email(email_obj, email_id, cfg, user_id=user_id)
 
             mail.logout()
-            storage.state["last_sync_time"] = datetime.now().isoformat()
-            storage.save()
+            user_storage.state["last_sync_time"] = datetime.now().isoformat()
+            user_storage.save()
 
-            storage.log("SYNC", f"Sync completed. Fetched {new_count} new emails.", "SUCCESS")
+            user_storage.log("SYNC", f"Sync completed. Fetched {new_count} new emails.", "SUCCESS")
             return {"status": "success", "count": new_count}
 
         except Exception as e:
             err_msg = f"IMAP Sync failed: {e}"
-            storage.log("SYNC", err_msg, "ERROR")
+            user_storage.log("SYNC", err_msg, "ERROR")
             return {"status": "error", "message": err_msg, "count": 0}
 
-    def _apply_rules_to_email(self, email_obj: Dict[str, Any], email_id: str, cfg: Dict[str, Any]):
-        """Match email against user rules and execute actions."""
-        rules = storage.get_rules()
+    def _apply_rules_to_email(self, email_obj: Dict[str, Any], email_id: str, cfg: Dict[str, Any], user_id: str = "default"):
+        """Match email against tenant user rules and execute actions."""
+        user_storage = storage.for_user(user_id)
+        rules = user_storage.get_rules()
         auto_cfg = cfg.get("automation", {})
         mode = auto_cfg.get("mode", "review_required")
         rule_draft_created = False
@@ -222,21 +224,21 @@ class EmailEngine:
             if matched:
                 action = rule.get("action")
                 param = rule.get("action_param", "")
-                storage.log("RULE", f"Rule '{rule.get('name')}' matched email '{email_obj.get('subject')}' -> Action: {action}", "INFO")
+                user_storage.log("RULE", f"Rule '{rule.get('name')}' matched email '{email_obj.get('subject')}' -> Action: {action}", "INFO")
 
                 if action == "mark_urgent":
-                    storage.update_email(email_id, {"priority": "Urgent"})
+                    user_storage.update_email(email_id, {"priority": "Urgent"})
                     email_obj["priority"] = "Urgent"
 
                 elif action == "set_category" and param:
-                    storage.update_email(email_id, {"category": param})
+                    user_storage.update_email(email_id, {"category": param})
                     email_obj["category"] = param
 
                 elif action in ["auto_draft", "auto_send"]:
                     rule_draft_created = True
                     tone = param or cfg.get("ai", {}).get("default_tone", "Professional")
-                    draft_body = ai_engine.generate_reply(email_obj, tone=tone)
-                    draft_id = storage.add_draft({
+                    draft_body = ai_engine.generate_reply(email_obj, tone=tone, user_id=user_id)
+                    draft_id = user_storage.add_draft({
                         "email_id": email_id,
                         "recipient": email_obj.get("from", ""),
                         "subject": f"Re: {email_obj.get('subject', '')}",
@@ -246,14 +248,14 @@ class EmailEngine:
                     })
 
                     if mode == "autonomous" or action == "auto_send":
-                        storage.log("APPROVAL", f"Autonomous mode: Auto-sending reply for draft {draft_id}", "INFO")
-                        self.send_draft(draft_id)
+                        user_storage.log("APPROVAL", f"Autonomous mode: Auto-sending reply for draft {draft_id}", "INFO")
+                        self.send_draft(draft_id, user_id=user_id)
 
         # Global auto_draft fallback: if auto_draft is enabled and no draft created yet and email is actionable
         if not rule_draft_created and auto_cfg.get("auto_draft", True) and email_obj.get("action_needed", True):
             tone = cfg.get("ai", {}).get("default_tone", "Professional")
-            draft_body = ai_engine.generate_reply(email_obj, tone=tone)
-            draft_id = storage.add_draft({
+            draft_body = ai_engine.generate_reply(email_obj, tone=tone, user_id=user_id)
+            draft_id = user_storage.add_draft({
                 "email_id": email_id,
                 "recipient": email_obj.get("from", ""),
                 "subject": f"Re: {email_obj.get('subject', '')}",
@@ -261,19 +263,20 @@ class EmailEngine:
                 "tone": tone,
                 "status": "pending"
             })
-            storage.log("AI", f"Auto-drafted AI reply for '{email_obj.get('subject')}' (Pending Approval)", "INFO")
+            user_storage.log("AI", f"Auto-drafted AI reply for '{email_obj.get('subject')}' (Pending Approval)", "INFO")
 
             if mode == "autonomous":
-                storage.log("APPROVAL", f"Autonomous mode: Auto-sending reply for draft {draft_id}", "INFO")
-                self.send_draft(draft_id)
+                user_storage.log("APPROVAL", f"Autonomous mode: Auto-sending reply for draft {draft_id}", "INFO")
+                self.send_draft(draft_id, user_id=user_id)
 
-    def send_draft(self, draft_id: str) -> Tuple[bool, str]:
-        """Approve and send an AI draft via SMTP or simulation."""
-        draft = storage.get_draft(draft_id)
+    def send_draft(self, draft_id: str, user_id: str = "default") -> Tuple[bool, str]:
+        """Approve and send an AI draft via SMTP or simulation for a tenant."""
+        user_storage = storage.for_user(user_id)
+        draft = user_storage.get_draft(draft_id)
         if not draft:
             return False, "Draft not found"
 
-        cfg = load_config()
+        cfg = load_config(user_id=user_id)
         acc = cfg.get("account", {})
         user = acc.get("email_address", "").strip()
         pwd = acc.get("app_password", "").strip()
@@ -285,24 +288,24 @@ class EmailEngine:
         # Security Check 1: Dispatch Rate Limiter
         can_dispatch, rate_msg = dispatch_limiter.can_dispatch()
         if not can_dispatch:
-            storage.log("SECURITY", f"Dispatch blocked by rate limiter: {rate_msg}", "WARNING")
+            user_storage.log("SECURITY", f"Dispatch blocked by rate limiter: {rate_msg}", "WARNING")
             return False, rate_msg
 
         # Security Check 2: Validate recipient address
         if not is_valid_email(to_addr):
             err_msg = f"Security Alert: Blocked send to invalid or disposable email address: '{to_addr}'"
-            storage.log("SECURITY", err_msg, "WARNING")
+            user_storage.log("SECURITY", err_msg, "WARNING")
             return False, err_msg
 
         # If credentials not set, simulate sending
         if not user or not pwd:
             dispatch_limiter.record_dispatch()
-            storage.log("SEND", f"[SIMULATION] Reply sent to {to_addr}: '{subject}'", "SUCCESS")
-            storage.update_draft(draft_id, {
+            user_storage.log("SEND", f"[SIMULATION] Reply sent to {to_addr}: '{subject}'", "SUCCESS")
+            user_storage.update_draft(draft_id, {
                 "status": "sent",
                 "sent_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             })
-            storage.add_sent_email({
+            user_storage.add_sent_email({
                 "to": to_addr,
                 "subject": subject,
                 "body": body,
@@ -330,29 +333,30 @@ class EmailEngine:
             server.quit()
             dispatch_limiter.record_dispatch()
 
-            storage.update_draft(draft_id, {
+            user_storage.update_draft(draft_id, {
                 "status": "sent",
                 "sent_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             })
-            storage.add_sent_email({
+            user_storage.add_sent_email({
                 "to": to_addr,
                 "subject": subject,
                 "body": body,
                 "email_id": draft.get("email_id"),
                 "status": "delivered",
-                "method": "SMTP (Gmail Live)"
+                "method": "SMTP (Live Delivery)"
             })
-            storage.log("SEND", f"Successfully dispatched live email to {to_addr}", "SUCCESS")
+            user_storage.log("SEND", f"Successfully dispatched live email to {to_addr}", "SUCCESS")
             return True, f"Email delivered successfully to {to_addr}!"
 
         except Exception as e:
             err_msg = f"Failed to send email via SMTP: {e}"
-            storage.update_draft(draft_id, {"error": str(e)})
-            storage.log("SEND", err_msg, "ERROR")
+            user_storage.update_draft(draft_id, {"error": str(e)})
+            user_storage.log("SEND", err_msg, "ERROR")
             return False, err_msg
 
-    def simulate_test_email(self, scenario: str = "customer_support") -> Dict[str, Any]:
-        """Simulate an incoming email for testing automation without needing real inbox access."""
+    def simulate_test_email(self, scenario: str = "customer_support", user_id: str = "default") -> Dict[str, Any]:
+        """Simulate an incoming email for a specific tenant without needing real inbox access."""
+        user_storage = storage.for_user(user_id)
         scenarios = {
             "customer_support": {
                 "from": "Sarah Jenkins <s.jenkins@techstartup.com>",
@@ -407,15 +411,15 @@ class EmailEngine:
             "status": "unread"
         }
 
-        # Analyze
-        analysis = ai_engine.analyze_email(email_obj)
+        # Analyze scoped to user
+        analysis = ai_engine.analyze_email(email_obj, user_id=user_id)
         email_obj.update(analysis)
 
-        email_id = storage.add_email(email_obj)
-        cfg = load_config()
-        self._apply_rules_to_email(email_obj, email_id, cfg)
+        email_id = user_storage.add_email(email_obj)
+        cfg = load_config(user_id=user_id)
+        self._apply_rules_to_email(email_obj, email_id, cfg, user_id=user_id)
 
-        storage.log("SYNC", f"Simulated test email received from {selected['from']}: '{selected['subject']}'", "SUCCESS")
+        user_storage.log("SYNC", f"Simulated test email received from {selected['from']}: '{selected['subject']}'", "SUCCESS")
         return {"email_id": email_id, "subject": selected["subject"]}
 
 

@@ -522,5 +522,23 @@ def test_all():
 
 
 if __name__ == "__main__":
-    test_all()
+    import tempfile
+    import shutil
+    from pathlib import Path
+    temp_dir = tempfile.mkdtemp(prefix="automail_test_email_service_")
+    os.environ["AUTOMAIL_DATA_DIR"] = temp_dir
+    src_data = Path(__file__).parent / "email_service" / "data"
+    p = Path(temp_dir)
+    (p / "tenants").mkdir(parents=True, exist_ok=True)
+    if (src_data / "config.json").exists():
+        shutil.copy(src_data / "config.json", p / "config.json")
+    if (src_data / "state.json").exists():
+        shutil.copy(src_data / "state.json", p / "state.json")
+    if (src_data / "users.json").exists():
+        shutil.copy(src_data / "users.json", p / "users.json")
+    try:
+        test_all()
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        os.environ.pop("AUTOMAIL_DATA_DIR", None)
 

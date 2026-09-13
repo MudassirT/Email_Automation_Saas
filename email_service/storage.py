@@ -13,7 +13,13 @@ from typing import Dict, List, Any, Optional, Tuple
 import threading
 import hashlib
 
-DATA_DIR = Path(__file__).parent / "data"
+def get_data_dir() -> Path:
+    custom = os.getenv("AUTOMAIL_DATA_DIR")
+    p = Path(custom) if custom else Path(__file__).parent / "data"
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
+DATA_DIR = get_data_dir()
 STATE_FILE = DATA_DIR / "state.json"
 _lock = threading.RLock()
 
@@ -160,12 +166,13 @@ class StorageManager:
     def __init__(self, user_id: str = "default"):
         from .security import tenant_security
         self.user_id = tenant_security.sanitize_tenant_id(user_id)
-        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        data_dir = get_data_dir()
+        data_dir.mkdir(parents=True, exist_ok=True)
         
         if self.user_id == "default":
-            self.state_file = STATE_FILE
+            self.state_file = data_dir / "state.json"
         else:
-            tenant_dir = DATA_DIR / "tenants" / self.user_id
+            tenant_dir = data_dir / "tenants" / self.user_id
             tenant_dir.mkdir(parents=True, exist_ok=True)
             self.state_file = tenant_dir / "state.json"
             
@@ -750,7 +757,7 @@ class StorageProxy:
 
     def list_tenants(self) -> List[Dict[str, Any]]:
         tenants = [{"id": "default", "name": "Default Account (Admin)", "active": True}]
-        tenant_dir = DATA_DIR / "tenants"
+        tenant_dir = get_data_dir() / "tenants"
         if tenant_dir.exists():
             for d in tenant_dir.iterdir():
                 if d.is_dir() and d.name != "default":

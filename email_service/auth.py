@@ -31,8 +31,17 @@ if ENV_FILE.exists():
 else:
     load_dotenv()
 
-DATA_DIR = Path(__file__).parent / "data"
-USERS_FILE = DATA_DIR / "users.json"
+def get_data_dir() -> Path:
+    custom = os.getenv("AUTOMAIL_DATA_DIR")
+    p = Path(custom) if custom else Path(__file__).parent / "data"
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
+def get_users_file() -> Path:
+    return get_data_dir() / "users.json"
+
+DATA_DIR = get_data_dir()
+USERS_FILE = get_users_file()
 _user_lock = threading.Lock()
 
 # Environment & Configuration Secrets
@@ -134,15 +143,16 @@ class UserManager:
     """Manages user persistence, registration, credentials, and tenant binding."""
 
     def __init__(self):
-        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        get_data_dir().mkdir(parents=True, exist_ok=True)
         self.users: Dict[str, Dict[str, Any]] = {}
         self._load_or_init()
 
     def _load_or_init(self):
+        users_file = get_users_file()
         with _user_lock:
-            if USERS_FILE.exists():
+            if users_file.exists():
                 try:
-                    with open(USERS_FILE, "r", encoding="utf-8") as f:
+                    with open(users_file, "r", encoding="utf-8") as f:
                         self.users = json.load(f)
                 except Exception:
                     self.users = {}
@@ -164,8 +174,9 @@ class UserManager:
                 self._save_unlocked()
 
     def _save_unlocked(self):
+        users_file = get_users_file()
         try:
-            with open(USERS_FILE, "w", encoding="utf-8") as f:
+            with open(users_file, "w", encoding="utf-8") as f:
                 json.dump(self.users, f, indent=2)
         except Exception as e:
             print(f"Error saving users.json: {e}")

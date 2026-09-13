@@ -18,22 +18,26 @@ from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives import hashes
 
-DATA_DIR = Path(__file__).parent / "data"
-KEY_FILE = DATA_DIR / ".vault_key"
+def get_data_dir() -> Path:
+    custom = os.getenv("AUTOMAIL_DATA_DIR")
+    p = Path(custom) if custom else Path(__file__).parent / "data"
+    p.mkdir(parents=True, exist_ok=True)
+    return p
 
 
 class SecretVault:
     """Manages encryption and decryption of credentials on disk with tenant envelope keys."""
     
     def __init__(self):
-        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        get_data_dir().mkdir(parents=True, exist_ok=True)
         self.key = self._get_or_create_key()
         self.cipher = Fernet(self.key)
 
     def _get_or_create_key(self) -> bytes:
-        if KEY_FILE.exists():
+        key_file = get_data_dir() / ".vault_key"
+        if key_file.exists():
             try:
-                with open(KEY_FILE, "rb") as f:
+                with open(key_file, "rb") as f:
                     key = f.read().strip()
                 if len(key) == 44:  # Standard Fernet key length
                     return key
@@ -43,18 +47,18 @@ class SecretVault:
         # Generate new key
         new_key = Fernet.generate_key()
         try:
-            with open(KEY_FILE, "wb") as f:
+            with open(key_file, "wb") as f:
                 f.write(new_key)
             # On Windows/Unix, restrict file permissions if possible
-            os.chmod(KEY_FILE, 0o600)
+            os.chmod(key_file, 0o600)
         except Exception:
             pass
         return new_key
 
-    def derive_tenant_key(self, org_id: str, salt: str, version: int = 1) -> bytes:
+    def derive_tenant_key(self, org_id: str, salt: str, version: int) -> bytes:
         """
         Derives an organization-isolated 256-bit Fernet encryption key using HKDF-SHA256.
-        Bound to org_id and key_version to support zero-downtime rotation.
+        Bound to org_id and explicit key_version to prevent silent version downgrade.
         """
         info = f"automail:{org_id}:v{version}".encode("utf-8")
         salt_bytes = salt.encode("utf-8") if isinstance(salt, str) else salt
@@ -67,8 +71,11 @@ class SecretVault:
         derived_raw = hkdf.derive(self.key)
         return base64.urlsafe_b64encode(derived_raw)
 
-    def encrypt_for_tenant(self, plain_text: str, org_id: str, salt: str, version: int = 1) -> str:
-        """Encrypt secret using organization's envelope key with versioning prefix."""
+    def encrypt_for_tenant(self, plain_text: str, org_id: str, salt: str, version: int) -> str:
+        """
+        Encrypt secret using organization's envelope key with versioning prefix.
+        Requires explicit version to prevent accidental silent downgrade to v1.
+        """
         if not plain_text:
             return ""
         try:

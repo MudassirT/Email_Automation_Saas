@@ -5,43 +5,60 @@ for zero-friction local developer testing and CI test suites.
 """
 
 import os
+from pathlib import Path
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from .models import Base
 
-# Database Connection URL
-# Production: postgresql+asyncpg://user:pass@host:5432/automail
-# Development/Test: sqlite+aiosqlite:///./email_service/data/automail_dev.db
-DEFAULT_DB_URL = "sqlite+aiosqlite:///./email_service/data/automail_dev.db"
-DATABASE_URL = os.getenv("DATABASE_URL", DEFAULT_DB_URL)
 
-# Normalize postgres:// to postgresql+asyncpg:// if provided by cloud platforms (e.g. Render/Heroku)
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
-elif DATABASE_URL.startswith("postgresql://") and "+asyncpg" not in DATABASE_URL:
-    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+def get_database_url() -> str:
+    explicit = os.getenv("DATABASE_URL")
+    if explicit:
+        url = explicit
+    else:
+        custom_data = os.getenv("AUTOMAIL_DATA_DIR")
+        if custom_data:
+            db_path = Path(custom_data) / "automail_test.db"
+            url = f"sqlite+aiosqlite:///{db_path.as_posix()}"
+        else:
+            url = "sqlite+aiosqlite:///./email_service/data/automail_dev.db"
 
-# Engine configuration
-# Note: PgBouncer transaction pooling & connection pool tuning (size/max_overflow)
-# is cataloged as a Phase 2 concern.
-engine_kwargs = {"echo": False}
-if "sqlite" in DATABASE_URL:
-    engine_kwargs["connect_args"] = {"check_same_thread": False}
-else:
-    engine_kwargs["pool_size"] = int(os.getenv("DB_POOL_SIZE", "10"))
-    engine_kwargs["max_overflow"] = int(os.getenv("DB_MAX_OVERFLOW", "20"))
-    engine_kwargs["pool_recycle"] = 3600
-    engine_kwargs["pool_pre_ping"] = True
+    # Normalize postgres:// to postgresql+asyncpg:// if provided by cloud platforms
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif url.startswith("postgresql://") and "+asyncpg" not in url:
+        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    return url
 
-async_engine = create_async_engine(DATABASE_URL, **engine_kwargs)
 
-# Async Session Factory
-AsyncSessionLocal = async_sessionmaker(
-    bind=async_engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-    autoflush=False
-)
+def create_engine_and_factory():
+    db_url = get_database_url()
+    kwargs = {"echo": False}
+    if "sqlite" in db_url:
+        kwargs["connect_args"] = {"check_same_thread": False}
+    else:
+        kwargs["pool_size"] = int(os.getenv("DB_POOL_SIZE", "10"))
+        kwargs["max_overflow"] = int(os.getenv("DB_MAX_OVERFLOW", "20"))
+        kwargs["pool_recycle"] = 3600
+        kwargs["pool_pre_ping"] = True
+    eng = create_async_engine(db_url, **kwargs)
+    factory = async_sessionmaker(
+        bind=eng,
+        class_=AsyncSession,
+        expire_on_commit=False,
+        autoflush=False
+    )
+    return eng, factory
+
+
+async_engine, AsyncSessionLocal = create_engine_and_factory()
+
+
+def reset_engine():
+    """Recreate engine and session factory dynamically (used when AUTOMAIL_DATA_DIR changes)."""
+    global async_engine, AsyncSessionLocal
+    async_engine, AsyncSessionLocal = create_engine_and_factory()
+    return async_engine, AsyncSessionLocal
 
 
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:

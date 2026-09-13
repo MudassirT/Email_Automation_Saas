@@ -13,7 +13,31 @@ Covers:
 import time
 import json
 import uuid
+import os
+import shutil
+import tempfile
+from pathlib import Path
 from fastapi.testclient import TestClient
+
+def setup_qa_sandbox():
+    temp_dir = tempfile.mkdtemp(prefix="automail_qa_sandbox_")
+    os.environ["AUTOMAIL_DATA_DIR"] = temp_dir
+    # Seed minimal clean baseline
+    src_data = Path(__file__).parent / "email_service" / "data"
+    p = Path(temp_dir)
+    (p / "tenants").mkdir(parents=True, exist_ok=True)
+    if (src_data / "config.json").exists():
+        shutil.copy(src_data / "config.json", p / "config.json")
+    if (src_data / "state.json").exists():
+        shutil.copy(src_data / "state.json", p / "state.json")
+    if (src_data / "users.json").exists():
+        shutil.copy(src_data / "users.json", p / "users.json")
+    return temp_dir
+
+def teardown_qa_sandbox(temp_dir):
+    shutil.rmtree(temp_dir, ignore_errors=True)
+    os.environ.pop("AUTOMAIL_DATA_DIR", None)
+
 from email_service.server import app
 from email_service.storage import storage
 from email_service.auth import hash_password, verify_password, create_jwt_token, decode_jwt_token
@@ -198,4 +222,8 @@ def test_qa_suite():
     print("==================================================================")
 
 if __name__ == "__main__":
-    test_qa_suite()
+    sandbox = setup_qa_sandbox()
+    try:
+        test_qa_suite()
+    finally:
+        teardown_qa_sandbox(sandbox)

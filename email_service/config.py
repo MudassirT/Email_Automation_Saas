@@ -11,7 +11,13 @@ from typing import Dict, Any
 
 from .security import vault
 
-DATA_DIR = Path(__file__).parent / "data"
+def get_data_dir() -> Path:
+    custom = os.getenv("AUTOMAIL_DATA_DIR")
+    p = Path(custom) if custom else Path(__file__).parent / "data"
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
+DATA_DIR = get_data_dir()
 CONFIG_FILE = DATA_DIR / "config.json"
 
 DEFAULT_CONFIG: Dict[str, Any] = {
@@ -51,16 +57,17 @@ def get_tenant_config_path(user_id: str = "default") -> Path:
     """Resolve isolated configuration file path for the given tenant."""
     from .security import tenant_security
     clean_id = tenant_security.sanitize_tenant_id(user_id)
+    data_dir = get_data_dir()
     if clean_id == "default":
-        return CONFIG_FILE
-    tenant_dir = DATA_DIR / "tenants" / clean_id
+        return data_dir / "config.json"
+    tenant_dir = data_dir / "tenants" / clean_id
     tenant_dir.mkdir(parents=True, exist_ok=True)
     return tenant_dir / "config.json"
 
 
 def load_config(user_id: str = "default") -> Dict[str, Any]:
     """Load configuration from disk for a specific tenant, decrypting sensitive secrets."""
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    get_data_dir().mkdir(parents=True, exist_ok=True)
     config_path = get_tenant_config_path(user_id)
     
     if not config_path.exists():
@@ -110,7 +117,7 @@ def load_config(user_id: str = "default") -> Dict[str, Any]:
 
 def save_config(new_config: Dict[str, Any], user_id: str = "default") -> bool:
     """Save configuration to disk with encrypted secrets for a specific tenant."""
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    get_data_dir().mkdir(parents=True, exist_ok=True)
     config_path = get_tenant_config_path(user_id)
     try:
         to_save = json.loads(json.dumps(new_config))  # deep copy

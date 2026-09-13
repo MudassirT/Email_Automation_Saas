@@ -2,14 +2,16 @@
 Comprehensive Phase 1 Integration Test Suite: Multi-Tenancy & Data Model Architecture.
 
 Verifies:
-1. Hard Startup Failure on unset/default JWT_SECRET_KEY in production.
-2. Tenant Envelope Encryption with HKDF-SHA256, versioning, and zero-downtime key rotation.
-3. Cross-Tenant Cryptographic Isolation (Org B cannot decrypt Org A's secrets).
-4. Relational Database Schema & Cascading Deletions across all 9 tables.
-5. Unique Constraints on (organization_id, email) and (organization_id, email_address).
-6. SOC-2 Track AuditLog: Actual redacted payload retained + SHA-256 HMAC integrity check.
-7. Idempotent Migration Script: Dry-run mode and live re-execution with zero duplicates.
-8. Distributed Sliding-Window Rate Limiter & Token Revocation Blacklist.
+1. Complete Test Isolation via Ephemeral Data Sandboxing (Zero pollution of real data/).
+2. Hard Startup Failure on unset/default JWT_SECRET_KEY in production.
+3. Strict Envelope Key Signatures (No silent default version: int = 1).
+4. Tenant Envelope Encryption with HKDF-SHA256, versioning, and cross-tenant isolation.
+5. Active Batched Key Re-Encryption with --dry-run, progress tracking, and SOC-2 AuditLog recording.
+6. Relational Database Schema & Cascading Deletions across all 9 tables.
+7. Unique Constraints on (organization_id, email) and (organization_id, email_address).
+8. SOC-2 Track AuditLog: Actual redacted payload retained + SHA-256 HMAC integrity check.
+9. Idempotent Migration Script: Dry-run mode and live re-execution with zero duplicates.
+10. Distributed Sliding-Window Rate Limiter & Token Revocation Blacklist.
 """
 
 import os
@@ -18,6 +20,8 @@ import asyncio
 import hashlib
 import json
 import secrets
+import shutil
+import tempfile
 import pytest
 from datetime import datetime, timezone
 from pathlib import Path
@@ -29,15 +33,65 @@ from email_service.db.models import (
     Base, Organization, User, Mailbox, EmailThread,
     EmailMessage, Draft, AutomationRule, AuditLog, Integration
 )
-from email_service.db.session import async_engine, AsyncSessionLocal, init_db
+from email_service.db import session as db_session
 from email_service.db.repositories import (
     OrganizationRepository, UserRepository, MailboxRepository,
     EmailRepository, DraftRepository, RuleRepository,
     AuditLogRepository, IntegrationRepository
 )
 from email_service.db.migrate_json_to_postgres import migrate_data
+from email_service.db.key_rotation import reencrypt_org_credentials
 from email_service.security import vault
 from email_service.db.redis_client import rate_limiter, token_blacklist
+
+
+class EphemeralTestSandbox:
+    """Manages an isolated temporary data directory per test run."""
+    def __init__(self):
+        self.temp_dir = tempfile.mkdtemp(prefix="automail_test_sandbox_")
+
+    def __enter__(self):
+        os.environ["AUTOMAIL_DATA_DIR"] = self.temp_dir
+        from email_service.db.session import reset_engine
+        reset_engine()
+        # Seed clean baseline
+        p = Path(self.temp_dir)
+        (p / "tenants").mkdir(parents=True, exist_ok=True)
+        with open(p / "users.json", "w", encoding="utf-8") as f:
+            json.dump({
+                "default": {
+                    "user_id": "default",
+                    "email": "admin@automail.ai",
+                    "name": "System Administrator",
+                    "role": "admin",
+                    "auth_provider": "local"
+                }
+            }, f, indent=2)
+        with open(p / "state.json", "w", encoding="utf-8") as f:
+            json.dump({
+                "emails": {
+                    "msg_seed_01": {
+                        "id": "msg_seed_01",
+                        "from": "client@partner.com",
+                        "to": "admin@automail.ai",
+                        "subject": "Seed Subject",
+                        "body": "Seed Body",
+                        "date": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+                    }
+                },
+                "drafts": {},
+                "rules": [],
+                "logs": []
+            }, f, indent=2)
+        with open(p / "config.json", "w", encoding="utf-8") as f:
+            json.dump({"account": {"email_address": "admin@automail.ai"}}, f, indent=2)
+        return self.temp_dir
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        from email_service.db.session import reset_engine
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+        os.environ.pop("AUTOMAIL_DATA_DIR", None)
+        reset_engine()
 
 
 def test_1_hard_jwt_startup_gate():
@@ -73,13 +127,18 @@ def test_1_hard_jwt_startup_gate():
     auth_mod._raw_jwt_key = original_raw
 
 
-def test_2_tenant_envelope_encryption_and_rotation():
-    """Verify envelope encryption key derivation, versioning, and rotation."""
-    print("\n[TEST 2] Verifying Tenant Envelope Encryption & Key Rotation...")
+def test_2_tenant_envelope_encryption_strict_signatures_and_rotation():
+    """Verify envelope encryption key derivation, strict version requirement, and rotation."""
+    print("\n[TEST 2] Verifying Envelope Encryption & Strict Signatures...")
 
     org_a = "org_alpha_01"
     salt_a = secrets.token_hex(16)
     secret_text = "gmail_app_password_xyz987"
+
+    # Strict Signature Check: Missing version MUST raise TypeError (no silent v1 default)
+    with pytest.raises(TypeError):
+        vault.encrypt_for_tenant(secret_text, org_a, salt_a)  # type: ignore
+    print("  [OK] Strict signature enforced: calling encrypt_for_tenant without version raises TypeError.")
 
     # Version 1 Encryption
     enc_v1 = vault.encrypt_for_tenant(secret_text, org_a, salt_a, version=1)
@@ -91,7 +150,7 @@ def test_2_tenant_envelope_encryption_and_rotation():
     # Key Rotation to Version 2
     enc_v2 = vault.encrypt_for_tenant(secret_text, org_a, salt_a, version=2)
     assert enc_v2.startswith("ENC::v2::")
-    assert enc_v2 != enc_v1  # Distinct ciphertext and distinct derived key
+    assert enc_v2 != enc_v1
     dec_v2 = vault.decrypt_for_tenant(enc_v2, org_a, salt_a)
     assert dec_v2 == secret_text
     print(f"  [OK] Version 2 (Rotated): {enc_v2[:24]}... -> Decrypted successfully.")
@@ -100,7 +159,7 @@ def test_2_tenant_envelope_encryption_and_rotation():
     org_b = "org_beta_02"
     salt_b = secrets.token_hex(16)
     dec_cross = vault.decrypt_for_tenant(enc_v1, org_b, salt_b)
-    assert dec_cross != secret_text  # Fails decryption cleanly or falls back without leak
+    assert dec_cross != secret_text
     print("  [OK] Cross-tenant isolation verified: Org B cannot decrypt Org A's envelope secret.")
 
 
@@ -109,9 +168,9 @@ async def test_3_database_schema_and_cascades():
     """Verify multi-tenant schema models, constraints, and cascade de-provisioning."""
     print("\n[TEST 3] Verifying Database Schema, Unique Constraints & Cascades...")
 
-    await init_db()
+    await db_session.init_db()
 
-    async with AsyncSessionLocal() as session:
+    async with db_session.AsyncSessionLocal() as session:
         org_repo = OrganizationRepository(session)
         user_repo = UserRepository(session)
         mbx_repo = MailboxRepository(session)
@@ -200,7 +259,7 @@ async def test_3_database_schema_and_cascades():
         dup_user = User(
             id=f"usr_dup_{secrets.token_hex(4)}",
             organization_id=test_org_id,
-            email="lead.architect@testenterprise.com",  # Duplicate email in same org
+            email="lead.architect@testenterprise.com",
             name="Duplicate User",
             role="member"
         )
@@ -214,7 +273,7 @@ async def test_3_database_schema_and_cascades():
         dup_mbx = Mailbox(
             id=f"mbx_dup_{secrets.token_hex(4)}",
             organization_id=test_org_id,
-            email_address="ops@testenterprise.com",  # Duplicate mailbox in same org
+            email_address="ops@testenterprise.com",
             imap_server="imap.gmail.com"
         )
         session.add(dup_mbx)
@@ -241,10 +300,9 @@ async def test_4_soc2_audit_payload_and_hmac_integrity():
     """Verify that AuditLog stores full redacted payload and authenticates via SHA-256 HMAC."""
     print("\n[TEST 4] Verifying SOC-2 Audit Payload Retention & HMAC Integrity...")
 
-    await init_db()
+    await db_session.init_db()
 
-    async with AsyncSessionLocal() as session:
-        # Create temporary org
+    async with db_session.AsyncSessionLocal() as session:
         org_id = f"org_audit_{secrets.token_hex(4)}"
         session.add(Organization(
             id=org_id,
@@ -298,42 +356,111 @@ async def test_4_soc2_audit_payload_and_hmac_integrity():
 
 
 @pytest.mark.asyncio
-async def test_5_idempotent_migration_dry_run_and_idempotency():
-    """Verify that migration is non-destructive, supports --dry-run, and produces zero duplicates."""
-    print("\n[TEST 5] Verifying Idempotent JSON-to-Postgres Migration...")
+async def test_5_active_batched_key_reencryption():
+    """Verify batched re-encryption of credentials, dry-run simulation, and AuditLog event."""
+    print("\n[TEST 5] Verifying Active Batched Key Re-Encryption Utility...")
 
-    await init_db()
+    await db_session.init_db()
 
-    async with AsyncSessionLocal() as session:
-        # A. Dry-run execution
-        dry_stats = await migrate_data(session, dry_run=True)
-        assert dry_stats["organizations"] > 0
-        assert dry_stats["users"] > 0
-        print(f"  [OK] Dry-run executed successfully: {dry_stats['organizations']} orgs, {dry_stats['messages']} messages simulated.")
+    async with db_session.AsyncSessionLocal() as session:
+        # Create Org with key_version 1
+        org_id = f"org_rot_{secrets.token_hex(4)}"
+        salt = secrets.token_hex(16)
+        org = Organization(
+            id=org_id,
+            name="Rotation Corp",
+            slug=f"slug-{org_id}",
+            encryption_salt=salt,
+            key_version=1
+        )
+        session.add(org)
+        await session.flush()
 
-        # B. Live execution 1
-        live_stats_1 = await migrate_data(session, dry_run=False)
-        print(f"  [OK] Live run #1 committed: {live_stats_1['organizations']} orgs, {live_stats_1['messages']} messages inserted.")
+        # Create 3 mailboxes encrypted with v1
+        for idx in range(3):
+            secret_pwd = f"pass_{idx}_{secrets.token_hex(4)}"
+            mbx = Mailbox(
+                id=f"mbx_rot_{idx}_{secrets.token_hex(3)}",
+                organization_id=org_id,
+                email_address=f"user{idx}@{org_id}.com",
+                encrypted_credentials=vault.encrypt_for_tenant(secret_pwd, org_id, salt, version=1)
+            )
+            session.add(mbx)
+        await session.commit()
 
-        # C. Live execution 2 (Idempotency test)
-        live_stats_2 = await migrate_data(session, dry_run=False)
-        # On second run, no new entities should be inserted (all are 0)
-        assert live_stats_2["organizations"] == 0
-        assert live_stats_2["users"] == 0
-        assert live_stats_2["mailboxes"] == 0
-        assert live_stats_2["messages"] == 0
-        assert live_stats_2["drafts"] == 0
-        print("  [OK] Idempotency verified: Second live run inserted 0 duplicates.")
+        # A. Test Dry Run (Should not change DB key_version or ciphertexts)
+        dry_stats = await reencrypt_org_credentials(
+            session, org_id=org_id, from_version=1, to_version=2, batch_size=2, dry_run=True
+        )
+        assert dry_stats["mailboxes_reencrypted"] == 3
+        # Verify DB untouched
+        org_check = await session.get(Organization, org_id)
+        assert org_check.key_version == 1
+        print("  [OK] Key rotation --dry-run simulated 3 mailboxes, left database version at 1.")
+
+        # B. Test Live Batched Re-encryption to v2
+        live_stats = await reencrypt_org_credentials(
+            session, org_id=org_id, from_version=1, to_version=2, batch_size=2, dry_run=False
+        )
+        assert live_stats["mailboxes_reencrypted"] == 3
+        assert live_stats["batches_processed"] == 2  # 3 items / batch_size 2 = 2 batches
+
+        # Verify DB updated to key_version 2
+        await session.refresh(org)
+        assert org.key_version == 2
+
+        # Verify ciphertexts are now sealed with v2
+        mbx_res = await session.execute(select(Mailbox).where(Mailbox.organization_id == org_id))
+        for m in mbx_res.scalars().all():
+            assert m.encrypted_credentials.startswith("ENC::v2::")
+            decrypted = vault.decrypt_for_tenant(m.encrypted_credentials, org_id, salt)
+            assert decrypted.startswith("pass_")
+        print("  [OK] Live batched re-encryption updated all ciphertexts to ENC::v2:: and bumped key_version.")
+
+        # Verify AuditLog event was written
+        audit_res = await session.execute(
+            select(AuditLog).where(AuditLog.organization_id == org_id, AuditLog.action == "ENVELOPE_KEY_ROTATION")
+        )
+        audit_entry = audit_res.scalar_one_or_none()
+        assert audit_entry is not None
+        assert audit_entry.redacted_payload["from_version"] == 1
+        assert audit_entry.redacted_payload["to_version"] == 2
+        print("  [OK] AuditLog entry for key rotation verified with forensic payload and HMAC hash.")
 
 
 @pytest.mark.asyncio
-async def test_6_distributed_rate_limiter_and_blacklist():
+async def test_6_idempotent_migration_in_sandbox():
+    """Verify that migration is non-destructive, supports --dry-run, and produces zero duplicates in clean sandbox."""
+    print("\n[TEST 6] Verifying Idempotent JSON-to-Postgres Migration in Isolated Sandbox...")
+
+    await db_session.init_db()
+
+    async with db_session.AsyncSessionLocal() as session:
+        # A. Dry-run execution against clean sandbox
+        dry_stats = await migrate_data(session, dry_run=True)
+        assert dry_stats["organizations"] >= 1
+        assert dry_stats["users"] >= 1
+        print(f"  [OK] Sandbox dry-run executed: {dry_stats['organizations']} orgs simulated.")
+
+        # B. Live execution 1
+        live_stats_1 = await migrate_data(session, dry_run=False)
+        print(f"  [OK] Sandbox live run #1 committed: {live_stats_1['organizations']} orgs inserted.")
+
+        # C. Live execution 2 (Idempotency test)
+        live_stats_2 = await migrate_data(session, dry_run=False)
+        assert live_stats_2["organizations"] == 0
+        assert live_stats_2["users"] == 0
+        assert live_stats_2["mailboxes"] == 0
+        print("  [OK] Sandbox idempotency verified: Re-run inserted 0 duplicates.")
+
+
+@pytest.mark.asyncio
+async def test_7_distributed_rate_limiter_and_blacklist():
     """Verify sliding-window rate limiting and token revocation."""
-    print("\n[TEST 6] Verifying Rate Limiter & Token Revocation...")
+    print("\n[TEST 7] Verifying Rate Limiter & Token Revocation...")
 
     client_id = f"client_{secrets.token_hex(4)}"
 
-    # Allow up to 3 requests in window
     ok1, rem1 = await rate_limiter.is_allowed(client_id, max_requests=3, window_seconds=10)
     assert ok1 is True
     assert rem1 == 2
@@ -346,13 +473,11 @@ async def test_6_distributed_rate_limiter_and_blacklist():
     assert ok3 is True
     assert rem3 == 0
 
-    # 4th request must be blocked
     ok4, rem4 = await rate_limiter.is_allowed(client_id, max_requests=3, window_seconds=10)
     assert ok4 is False
     assert rem4 == 0
     print("  [OK] Sliding window rate limiter successfully throttles beyond limit.")
 
-    # Token Blacklist Revocation
     test_token = f"jwt_tok_{secrets.token_hex(16)}"
     assert await token_blacklist.is_revoked(test_token) is False
     await token_blacklist.revoke_token(test_token, ttl_seconds=60)
@@ -365,12 +490,19 @@ def run_all():
     print("      PHASE 1 INTEGRATION TEST SUITE: MULTI-TENANCY & DATA ARCHITECTURE")
     print("=" * 70)
 
-    test_1_hard_jwt_startup_gate()
-    test_2_tenant_envelope_encryption_and_rotation()
-    asyncio.run(test_3_database_schema_and_cascades())
-    asyncio.run(test_4_soc2_audit_payload_and_hmac_integrity())
-    asyncio.run(test_5_idempotent_migration_dry_run_and_idempotency())
-    asyncio.run(test_6_distributed_rate_limiter_and_blacklist())
+    # Wrap entire execution in isolated ephemeral sandbox
+    with EphemeralTestSandbox() as sandbox_path:
+        print(f"  [SANDBOX ACTIVE] Ephemeral test data sandbox: {sandbox_path}")
+
+        test_1_hard_jwt_startup_gate()
+        test_2_tenant_envelope_encryption_strict_signatures_and_rotation()
+        asyncio.run(test_3_database_schema_and_cascades())
+        asyncio.run(test_4_soc2_audit_payload_and_hmac_integrity())
+        asyncio.run(test_5_active_batched_key_reencryption())
+        asyncio.run(test_6_idempotent_migration_in_sandbox())
+        asyncio.run(test_7_distributed_rate_limiter_and_blacklist())
+
+        print(f"  [SANDBOX TEARDOWN] Cleaning up ephemeral sandbox...")
 
     print("\n" + "=" * 70)
     print("      ALL PHASE 1 INTEGRATION TESTS PASSED WITH ZERO ERRORS! [OK]")

@@ -28,9 +28,15 @@ from .models import (
     Base, Organization, User, Mailbox, EmailThread,
     EmailMessage, Draft, AutomationRule, AuditLog, Integration
 )
-from .session import AsyncSessionLocal, init_db
+from . import session as db_session
 
-DATA_DIR = Path(__file__).parent.parent / "data"
+def get_data_dir() -> Path:
+    custom = os.getenv("AUTOMAIL_DATA_DIR")
+    p = Path(custom) if custom else Path(__file__).parent.parent / "data"
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
+DATA_DIR = get_data_dir()
 USERS_FILE = DATA_DIR / "users.json"
 DEFAULT_CONFIG_FILE = DATA_DIR / "config.json"
 DEFAULT_STATE_FILE = DATA_DIR / "state.json"
@@ -363,9 +369,9 @@ async def run_migration(dry_run: bool = False):
     print(f"   AUTOMAIL AI DATA MIGRATION: JSON -> POSTGRES ({mode_label})")
     print("=" * 65)
 
-    await init_db()
+    await db_session.init_db()
 
-    async with AsyncSessionLocal() as session:
+    async with db_session.AsyncSessionLocal() as session:
         start_time = datetime.now(timezone.utc)
         stats = await migrate_data(session, dry_run=dry_run)
         duration = (datetime.now(timezone.utc) - start_time).total_seconds()

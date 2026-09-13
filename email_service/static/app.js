@@ -25,6 +25,7 @@ let refreshInterval = null;
 
 // DOM Ready
 document.addEventListener("DOMContentLoaded", () => {
+  initTheme();
   initNav();
   initModals();
   initActions();
@@ -35,6 +36,40 @@ document.addEventListener("DOMContentLoaded", () => {
     loadAllData(false);
   }, 12000);
 });
+
+// Theme Management (Dark & Light)
+function initTheme() {
+  const saved = localStorage.getItem("automail_theme");
+  const systemPrefersLight = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches;
+  const initialTheme = saved || (systemPrefersLight ? "light" : "dark");
+  applyTheme(initialTheme);
+
+  const toggleBtn = document.getElementById("btn-theme-toggle");
+  if (toggleBtn) {
+    toggleBtn.addEventListener("click", () => {
+      const current = document.documentElement.getAttribute("data-theme") || "dark";
+      const next = current === "dark" ? "light" : "dark";
+      applyTheme(next);
+      showToast(`Switched to ${next === "light" ? "Light" : "Dark"} theme`, "info");
+    });
+  }
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  localStorage.setItem("automail_theme", theme);
+  const icon = document.getElementById("theme-icon");
+  const text = document.getElementById("theme-text");
+  if (icon && text) {
+    if (theme === "light") {
+      icon.textContent = "☀️";
+      text.textContent = "Light";
+    } else {
+      icon.textContent = "🌙";
+      text.textContent = "Dark";
+    }
+  }
+}
 
 // Navigation Handling
 function initNav() {

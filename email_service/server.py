@@ -14,6 +14,7 @@ import threading
 import time
 from pathlib import Path
 from typing import Dict, Any, Optional, List
+from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, Request, Response, BackgroundTasks, Depends
 from fastapi.staticfiles import StaticFiles
@@ -103,7 +104,22 @@ def get_current_user_account(request: Request) -> Optional[Dict[str, Any]]:
             if user:
                 return user
 
-    # 2. Cookie token
+    # 2. Explicit tenant workspace header (API or frontend workspace switch)
+    explicit_uid = request.headers.get("X-User-Id")
+    if explicit_uid:
+        clean_id = tenant_security.sanitize_tenant_id(explicit_uid)
+        user = user_manager.get_user_by_id(clean_id)
+        if user:
+            return user
+        return {
+            "id": clean_id,
+            "email": f"{clean_id}@automail.local",
+            "name": clean_id.capitalize(),
+            "role": "admin" if clean_id == "default" else "user",
+            "provider": "local"
+        }
+
+    # 3. Cookie token
     token_cookie = request.cookies.get("automail_token")
     if token_cookie:
         payload = decode_jwt_token(token_cookie)
@@ -112,8 +128,8 @@ def get_current_user_account(request: Request) -> Optional[Dict[str, Any]]:
             if user:
                 return user
 
-    # 3. Direct user_id header or cookie fallback
-    uid = request.headers.get("X-User-Id") or request.cookies.get("automail_user_id") or request.query_params.get("user_id")
+    # 4. Cookie or Query fallback
+    uid = request.cookies.get("automail_user_id") or request.query_params.get("user_id")
     if uid:
         clean_id = tenant_security.sanitize_tenant_id(uid)
         user = user_manager.get_user_by_id(clean_id)
@@ -224,6 +240,18 @@ class ChatQueryPayload(BaseModel):
     query: str
     filter_type: Optional[str] = None
     conversation_history: Optional[List[Dict[str, str]]] = []
+
+class IntegrationUpdatePayload(BaseModel):
+    connector_id: str
+    enabled: Optional[bool] = None
+    webhook_url: Optional[str] = None
+    channel: Optional[str] = None
+    project_key: Optional[str] = None
+
+class TeamInvitePayload(BaseModel):
+    name: str
+    email: str
+    role: str = "Executive Assistant"
 
 
 # --- FRONTEND ROUTE ---
@@ -707,6 +735,65 @@ def chat_history(user_id: str = Depends(get_current_user_id)):
 def chat_clear(user_id: str = Depends(get_current_user_id)):
     """Clear active user's chat session."""
     return {"success": True, "message": "Chat session cleared.", "user_id": user_id}
+
+
+# --- ENTERPRISE SERVICES & GOVERNANCE SUITE ---
+@app.get("/api/enterprise/metrics")
+def get_enterprise_metrics(hourly_rate: float = 85.0, user_id: str = Depends(get_current_user_id)):
+    """Return live calculated enterprise productivity ROI, hours saved, and SLA reduction."""
+    return storage.for_user(user_id).get_enterprise_metrics(hourly_rate=hourly_rate)
+
+
+@app.get("/api/enterprise/compliance")
+def get_enterprise_compliance(user_id: str = Depends(get_current_user_id)):
+    """Return enterprise SOC-2, ISO-27001, GDPR, and HIPAA compliance posture."""
+    return storage.for_user(user_id).get_compliance_status()
+
+
+@app.get("/api/enterprise/integrations")
+def get_enterprise_integrations(user_id: str = Depends(get_current_user_id)):
+    """Return enterprise connectors list and active status."""
+    return storage.for_user(user_id).get_integrations()
+
+
+@app.post("/api/enterprise/integrations/toggle")
+def toggle_enterprise_integration(payload: IntegrationUpdatePayload, user_id: str = Depends(get_current_user_id)):
+    """Update or toggle an enterprise integration connector."""
+    updates = {k: v for k, v in payload.dict().items() if v is not None}
+    cid = updates.pop("connector_id", "")
+    res = storage.for_user(user_id).update_integration(cid, updates)
+    return {"success": True, "connector_id": cid, "config": res}
+
+
+@app.get("/api/enterprise/team")
+def get_enterprise_team(user_id: str = Depends(get_current_user_id)):
+    """Return organization seats allocation and team member roster."""
+    return storage.for_user(user_id).get_team_members()
+
+
+@app.post("/api/enterprise/team/invite")
+def invite_enterprise_team(payload: TeamInvitePayload, user_id: str = Depends(get_current_user_id)):
+    """Invite a new enterprise seat license with RBAC role."""
+    if not payload.email or "@" not in payload.email:
+        raise HTTPException(status_code=400, detail="Valid email required")
+    member = storage.for_user(user_id).invite_team_member(
+        name=payload.name,
+        email=payload.email,
+        role=payload.role
+    )
+    return {"success": True, "member": member}
+
+
+@app.get("/api/enterprise/audit/export")
+def export_enterprise_audit_logs(format: str = "json", user_id: str = Depends(get_current_user_id)):
+    """Export cryptographic SIEM audit logs as JSON or CSV."""
+    content, media_type = storage.for_user(user_id).export_audit_logs(format_type=format)
+    filename = f"automail_audit_{user_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{format}"
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
 
 
 def run():

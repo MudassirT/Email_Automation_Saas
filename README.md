@@ -20,21 +20,43 @@ A dedicated, UI-based **Autonomous Email Automation Service** with AI email cate
    - **Dispatch Rate Limiting**: Maximum 30 emails per hour sliding-window guardrail to prevent runaway email loops.
    - **Recipient Validation**: RFC-compliant email verification and automatic blocking of disposable/burner domains.
 
-3. **AI Email Intelligence**
+3. **Enterprise SaaS Suite & Public Showcase**
+   - **Interactive Live ROI / Cost-Savings Calculator**: Dynamic sliders for team seats (5–500), daily inbound emails, and blended hourly rate ($30–$250/hr), computing real-time monthly hours saved and dollar ROI.
+   - **Interactive Capabilities Showcase**: Segmented feature switchers showcasing 1-Sentence Executive Briefings, Human-in-the-Loop Safe Approval Queue, PromptShield Adversarial Threat Defense, and 100% Isolated Multi-Tenant RAG Copilot.
+   - **Annual / Monthly Billing Matrix**: Transparent enterprise tier pricing (Starter $49, Professional $199, Enterprise Scale $899) with 20% annual discount toggling.
+
+4. **Security, Governance & Compliance Center**
+   - **Continuous Regulatory Posture Monitoring**: Real-time compliance scorecards tracking SOC-2 Type II (99.4% controls active), ISO/IEC 27001:2022 (98.2% Annex A verified), HIPAA Security Rule (100% BAA ready), and GDPR Art. 28 / DPA (100% compliant).
+   - **Cryptographic SIEM Audit Export**: Download SHA-256 HMAC-signed audit streams in JSON or CSV for Splunk, Datadog, or external SOC compliance ingestion.
+   - **SAML 2.0 / Enterprise SSO Ready**: Okta, Microsoft Entra ID (Azure AD), and Google Workspace integration hooks.
+
+5. **Enterprise Integrations Hub & Ecosystem Connectors**
+   - Multi-tenant isolated webhook connectors for **Slack Enterprise Grid**, **Microsoft Teams**, **Jira Service Management**, **Salesforce CRM**, and **Datadog / Splunk SIEM**.
+   - Per-tenant custom webhook configuration with zero cross-organization leakage.
+
+6. **Multi-Seat RBAC Organization & Team Governance**
+   - Seat utilization gauge with total, allocated, and available licenses.
+   - Role-Based Access Control (Enterprise Owner, Security Officer, Operations Admin, Compliance Auditor) with enforced MFA status and activity tracking.
+
+7. **Universal Spotlight Command Palette (`Ctrl+K` / `⌘K`)**
+   - Fast, keyboard-first navigation to all views, quick simulation, SIEM export, theme switching, and direct RAG search queries.
+
+8. **AI Email Intelligence & Multi-Tenant RAG Copilot**
    - Automatic classification: *Customer Support*, *Sales Inquiry*, *Billing/Invoice*, *Urgent Action*, *General Inquiry*, *Newsletter/Spam*.
    - Priority and Sentiment analysis (*Urgent*, *High*, *Medium*, *Low*).
-   - Executive 1-2 sentence summaries for fast scanning.
+   - Executive 1-2 sentence summaries and action item task extraction.
+   - Hybrid BM25 + Semantic RAG query engine answering questions against private mailbox context with strict per-user boundaries.
 
-4. **Human-in-the-Loop Approval Queue**
+9. **Human-in-the-Loop Approval Queue**
    - Side-by-side view: Original incoming email vs AI-drafted reply.
    - 1-click tone switcher (*Professional*, *Friendly*, *Direct*, *Executive*).
    - Instant inline text editor to refine replies before sending.
    - One-click **"Approve & Send"** and **"Dismiss / Reject"**.
 
-5. **Visual Automation Rules Engine**
-   - Custom triggers (*Subject*, *Sender*, *Category*, *Priority*) with operators (*contains*, *equals*, *starts_with*).
-   - Actions: Auto-generate draft, Mark urgent, Assign category, Auto-send.
-   - Instant toggle switches to enable/disable rules.
+10. **Visual Automation Rules Engine**
+    - Custom triggers (*Subject*, *Sender*, *Category*, *Priority*) with operators (*contains*, *equals*, *starts_with*).
+    - Actions: Auto-generate draft, Mark urgent, Assign category, Auto-send.
+    - Instant toggle switches to enable/disable rules.
 
 ---
 

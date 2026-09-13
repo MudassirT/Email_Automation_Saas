@@ -59,10 +59,34 @@
         <span>Live Activity Logs</span>
       </a>
 
+      <a class="nav-item" data-view="landing" id="nav-landing">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+        <span>Enterprise Showcase</span>
+        <span class="nav-badge" style="background: rgba(16, 185, 129, 0.2); color: var(--accent-emerald); border-color: rgba(16, 185, 129, 0.4);">HQ</span>
+      </a>
+
       <a class="nav-item" data-view="chat" id="nav-chat">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
         <span>AI Copilot (RAG)</span>
         <span class="nav-badge" style="background: rgba(99, 102, 241, 0.2); color: var(--accent-secondary); border-color: rgba(99, 102, 241, 0.4);">RAG</span>
+      </a>
+
+      <a class="nav-item" data-view="compliance" id="nav-compliance">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+        <span>Security & Compliance</span>
+        <span class="nav-badge" style="background: rgba(14, 165, 233, 0.2); color: var(--accent-cyan); border-color: rgba(14, 165, 233, 0.4);">SOC-2</span>
+      </a>
+
+      <a class="nav-item" data-view="integrations" id="nav-integrations">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"/></svg>
+        <span>Integrations Hub</span>
+        <span class="nav-badge" style="background: rgba(245, 158, 11, 0.2); color: var(--accent-amber); border-color: rgba(245, 158, 11, 0.4);">API</span>
+      </a>
+
+      <a class="nav-item" data-view="team" id="nav-team">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+        <span>Team & Seats</span>
+        <span class="nav-badge" style="background: rgba(236, 72, 153, 0.2); color: #ec4899; border-color: rgba(236, 72, 153, 0.4);">Seats</span>
       </a>
 
       <a class="nav-item" data-view="settings" id="nav-settings">
@@ -127,6 +151,21 @@
           <span class="ai-status-dot" id="ai-status-dot"></span>
           <span id="ai-status-label">AI: Ready</span>
         </div>
+
+        <button class="btn btn-secondary btn-sm" id="btn-topbar-command" title="Press Ctrl+K or ⌘K to open Universal Command Palette">
+          <span style="font-weight: 700; font-size: 0.75rem; background: var(--bg-hover); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color);">⌘K</span>
+          <span>Search</span>
+        </button>
+
+        <button class="btn btn-secondary btn-sm" id="btn-topbar-landing" onclick="switchView('landing')" title="Open Public Enterprise Showcase & ROI Calculator">
+          <span style="font-size: 0.92rem;">🏢</span>
+          <span>Showcase</span>
+        </button>
+
+        <button class="btn btn-secondary btn-sm" id="btn-density-toggle" title="Toggle Comfortable / Compact Data Density">
+          <span id="density-icon">🎛️</span>
+          <span id="density-text">Density</span>
+        </button>
 
         <button class="btn btn-secondary btn-sm" id="btn-topbar-copilot" onclick="switchView('chat')" title="Ask AutoMail AI Copilot (RAG)">
           <span style="font-size: 0.95rem;">🤖</span>
@@ -693,6 +732,419 @@
             </div>
           </div>
         </div>
+      <!-- 8. ENTERPRISE SHOWCASE & LANDING VIEW -->
+      <section class="view-section" id="view-landing">
+        <div class="enterprise-hero-card">
+          <div class="hero-badge">
+            <span class="hero-pulse"></span>
+            <span>ENTERPRISE EDITION • SOC-2 TYPE II • ZERO DATA RETENTION</span>
+          </div>
+          <h1 class="hero-title">Autonomous AI Email Operations for Modern Enterprises</h1>
+          <p class="hero-subtitle">
+            Transform mission-critical mailboxes into instant executive briefings, autonomous human-in-the-loop draft responses, and real-time task orchestration with hardware-grade zero-trust security.
+          </p>
+          <div class="hero-actions">
+            <button class="btn btn-primary btn-lg" onclick="switchView('overview')" id="btn-hero-launch">
+              <span>Launch Enterprise Dashboard</span>
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+            </button>
+            <button class="btn btn-secondary btn-lg" onclick="document.getElementById('roi-calculator-card').scrollIntoView({behavior: 'smooth'})">
+              <span>Explore ROI Calculator 📊</span>
+            </button>
+            <button class="btn btn-success btn-lg" onclick="openModal('modal-pilot-request')">
+              <span>Book 14-Day Pilot 🚀</span>
+            </button>
+          </div>
+
+          <!-- Enterprise Trust Ribbon -->
+          <div class="hero-trust-ribbon">
+            <div class="trust-item"><span class="trust-icon">🛡️</span><span>SOC-2 Type II Certified</span></div>
+            <div class="trust-item"><span class="trust-icon">🔒</span><span>AES-256 Fernet Vault</span></div>
+            <div class="trust-item"><span class="trust-icon">⚡</span><span>99.99% Enterprise SLA</span></div>
+            <div class="trust-item"><span class="trust-icon">🚫</span><span>Zero LLM Training Retention</span></div>
+            <div class="trust-item"><span class="trust-icon">👥</span><span>Multi-Tenant Physical Isolation</span></div>
+            <div class="trust-item"><span class="trust-icon">🏢</span><span>On-Prem / Private VPC Ready</span></div>
+          </div>
+        </div>
+
+        <!-- LIVE ENTERPRISE ROI & EFFICIENCY CALCULATOR -->
+        <div class="card enterprise-section-card" id="roi-calculator-card">
+          <div class="section-card-header">
+            <div>
+              <div class="enterprise-tag">FINANCIAL IMPACT</div>
+              <h3 style="margin-top: 4px; font-size: 1.35rem;">Enterprise Productivity & Financial ROI Calculator</h3>
+              <p style="color: var(--text-muted); font-size: 0.88rem; margin: 0;">
+                Simulate exact executive hours and operational budget reclaimed with AutoMail AI automation.
+              </p>
+            </div>
+            <div class="roi-live-badge">Live Real-Time Engine</div>
+          </div>
+
+          <div class="roi-grid-layout">
+            <!-- Sliders Column -->
+            <div class="roi-sliders-box">
+              <div class="roi-slider-group">
+                <div class="roi-slider-label-row">
+                  <label for="roi-input-seats">Team / Executive Headcount</label>
+                  <span class="roi-slider-val"><strong id="roi-disp-seats">50</strong> Seats</span>
+                </div>
+                <input type="range" class="roi-slider" id="roi-input-seats" min="5" max="500" value="50" step="5" oninput="updateEnterpriseROI()">
+                <div class="roi-slider-hints"><span>5 seats</span><span>250 seats</span><span>500+ seats</span></div>
+              </div>
+
+              <div class="roi-slider-group">
+                <div class="roi-slider-label-row">
+                  <label for="roi-input-emails">Inbound Emails / Day Per Seat</label>
+                  <span class="roi-slider-val"><strong id="roi-disp-emails">45</strong> Emails / Day</span>
+                </div>
+                <input type="range" class="roi-slider" id="roi-input-emails" min="10" max="200" value="45" step="5" oninput="updateEnterpriseROI()">
+                <div class="roi-slider-hints"><span>10 emails</span><span>100 emails</span><span>200+ emails</span></div>
+              </div>
+
+              <div class="roi-slider-group">
+                <div class="roi-slider-label-row">
+                  <label for="roi-input-rate">Average Executive / Specialist Hourly Rate</label>
+                  <span class="roi-slider-val">$<strong id="roi-disp-rate">85</strong> / Hour</span>
+                </div>
+                <input type="range" class="roi-slider" id="roi-input-rate" min="30" max="250" value="85" step="5" oninput="updateEnterpriseROI()">
+                <div class="roi-slider-hints"><span>$30/hr</span><span>$120/hr</span><span>$250/hr</span></div>
+              </div>
+            </div>
+
+            <!-- Results Output Cards Column -->
+            <div class="roi-results-box">
+              <div class="roi-stat-card highlight">
+                <div class="roi-stat-title">Monthly Executive Hours Saved</div>
+                <div class="roi-stat-number" id="roi-out-hours">1,125 hrs</div>
+                <div class="roi-stat-sub">Across your organization each month</div>
+              </div>
+
+              <div class="roi-stat-card success">
+                <div class="roi-stat-title">Monthly Operational Savings</div>
+                <div class="roi-stat-number" id="roi-out-savings">$95,625</div>
+                <div class="roi-stat-sub">Direct labor budget reclaimed</div>
+              </div>
+
+              <div class="roi-stat-card primary">
+                <div class="roi-stat-title">Annual Enterprise Value</div>
+                <div class="roi-stat-number" id="roi-out-annual">$1.15M</div>
+                <div class="roi-stat-sub">Net bottom-line economic ROI</div>
+              </div>
+
+              <div class="roi-stat-card cyan">
+                <div class="roi-stat-title">Response Latency Reduction</div>
+                <div class="roi-stat-number" id="roi-out-sla">4.8h → 1.4m</div>
+                <div class="roi-stat-sub">-98.4% faster resolution cycle</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ENTERPRISE CAPABILITIES SHOWCASE -->
+        <div class="card enterprise-section-card">
+          <div class="enterprise-tag">CORE CAPABILITIES</div>
+          <h3 style="margin-top: 4px; font-size: 1.35rem; margin-bottom: 14px;">Enterprise Architecture In Action</h3>
+          
+          <div class="capabilities-tabs">
+            <button class="cap-tab active" onclick="setCapTab(0)">1. Executive Briefings</button>
+            <button class="cap-tab" onclick="setCapTab(1)">2. Human-in-the-Loop Approvals</button>
+            <button class="cap-tab" onclick="setCapTab(2)">3. PromptShield Defense</button>
+            <button class="cap-tab" onclick="setCapTab(3)">4. Isolated RAG Copilot</button>
+          </div>
+
+          <div class="cap-content-box" id="cap-content-box">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- ENTERPRISE PRICING & PLAN COMPARISON -->
+        <div class="card enterprise-section-card">
+          <div class="section-card-header" style="text-align: center; display: block;">
+            <div class="enterprise-tag">TRANSPARENT PRICING</div>
+            <h3 style="font-size: 1.5rem; margin: 6px 0;">Predictable Enterprise Licensing</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Deploy on our secure cloud or in your private VPC.</p>
+
+            <div class="billing-toggle-container">
+              <span>Monthly</span>
+              <label class="switch">
+                <input type="checkbox" id="billing-annual-toggle" onchange="toggleBillingCycle()">
+                <span class="slider round"></span>
+              </label>
+              <span>Annual</span>
+              <span class="badge badge-success" style="font-size: 0.75rem;">Save 20%</span>
+            </div>
+          </div>
+
+          <div class="pricing-grid">
+            <!-- Plan 1: Starter -->
+            <div class="pricing-card">
+              <div class="plan-header">
+                <h4>Starter Scale</h4>
+                <p class="plan-desc">For growing teams automating high-velocity mailboxes.</p>
+                <div class="plan-price">
+                  <span class="price-curr">$</span>
+                  <span class="price-num" id="price-starter">49</span>
+                  <span class="price-cycle">/month</span>
+                </div>
+              </div>
+              <ul class="plan-features">
+                <li>✓ Up to 5 Mailboxes</li>
+                <li>✓ Smart Classification (6 Categories)</li>
+                <li>✓ 1-Sentence Executive Briefings</li>
+                <li>✓ AES-256 Fernet Vault Encryption</li>
+                <li>✓ Basic Rate Limiting & Anti-CSRF</li>
+              </ul>
+              <button class="btn btn-secondary" style="width: 100%;" onclick="openAuthModal()">Start Free Trial</button>
+            </div>
+
+            <!-- Plan 2: Professional -->
+            <div class="pricing-card popular">
+              <div class="popular-ribbon">MOST POPULAR</div>
+              <div class="plan-header">
+                <h4>Professional</h4>
+                <p class="plan-desc">For scaling enterprises with active executives & SLA goals.</p>
+                <div class="plan-price">
+                  <span class="price-curr">$</span>
+                  <span class="price-num" id="price-pro">199</span>
+                  <span class="price-cycle">/month</span>
+                </div>
+              </div>
+              <ul class="plan-features">
+                <li>✓ Up to 25 Mailboxes</li>
+                <li>✓ Dual-Mode Gemini 1.5 Flash + Built-in RAG</li>
+                <li>✓ PromptShield Adversarial Injection Defense</li>
+                <li>✓ DataLeakPreventer Regex Redaction</li>
+                <li>✓ Slack & Microsoft Teams Connectors</li>
+                <li>✓ Human-in-the-Loop Tone Regeneration</li>
+              </ul>
+              <button class="btn btn-primary" style="width: 100%;" onclick="openAuthModal()">Deploy Professional</button>
+            </div>
+
+            <!-- Plan 3: Enterprise Scale -->
+            <div class="pricing-card enterprise">
+              <div class="plan-header">
+                <h4>Enterprise Scale</h4>
+                <p class="plan-desc">Full governance, dedicated VPC, SAML SSO, and custom SLAs.</p>
+                <div class="plan-price">
+                  <span class="price-curr">$</span>
+                  <span class="price-num" id="price-enterprise">899</span>
+                  <span class="price-cycle">/month</span>
+                </div>
+              </div>
+              <ul class="plan-features">
+                <li>✓ Unlimited Mailboxes & Multi-Seats</li>
+                <li>✓ On-Premises or Dedicated AWS/GCP/Azure VPC</li>
+                <li>✓ 99.99% Uptime SLA Guarantee</li>
+                <li>✓ SAML 2.0 / Okta / Azure AD Enterprise SSO</li>
+                <li>✓ Real-Time Cryptographic SIEM Export</li>
+                <li>✓ Contractual Zero Data Retention Guarantee</li>
+                <li>✓ 24/7 Dedicated Security Engineer</li>
+              </ul>
+              <button class="btn btn-success" style="width: 100%;" onclick="openModal('modal-pilot-request')">Talk to Enterprise Sales</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 9. SECURITY & COMPLIANCE VIEW -->
+      <section class="view-section" id="view-compliance">
+        <!-- Posture Scorecard Header -->
+        <div class="card compliance-scorecard-card">
+          <div class="compliance-header-row">
+            <div>
+              <div class="enterprise-tag">GOVERNANCE & TRUST</div>
+              <h2 style="margin: 4px 0; font-size: 1.5rem;">Enterprise Security Posture & Compliance Center</h2>
+              <p style="color: var(--text-muted); font-size: 0.88rem; margin: 0;">
+                Cryptographically enforced controls, real-time auditability, and regulatory adherence.
+              </p>
+            </div>
+            <div class="posture-gauge-box">
+              <div class="posture-score-num">98<span>/100</span></div>
+              <div class="posture-score-label">Enterprise Hardened</div>
+            </div>
+          </div>
+
+          <!-- Framework Cards -->
+          <div class="frameworks-grid">
+            <div class="framework-card">
+              <div class="fw-header">
+                <span class="fw-code">SOC-2 Type II</span>
+                <span class="badge badge-success">Certified</span>
+              </div>
+              <div class="fw-body">
+                <div class="fw-cov-row"><span>Security Controls:</span><strong>48 / 48 (99.4%)</strong></div>
+                <div class="fw-progress-bar"><div class="fw-progress-fill" style="width: 99.4%;"></div></div>
+                <div class="fw-sub">Audit-ready continuous control monitoring</div>
+              </div>
+            </div>
+
+            <div class="framework-card">
+              <div class="fw-header">
+                <span class="fw-code">ISO/IEC 27001:2022</span>
+                <span class="badge badge-success">Verified</span>
+              </div>
+              <div class="fw-body">
+                <div class="fw-cov-row"><span>Annex A Controls:</span><strong>93 / 93 (98.2%)</strong></div>
+                <div class="fw-progress-bar"><div class="fw-progress-fill" style="width: 98.2%;"></div></div>
+                <div class="fw-sub">Information security management verified</div>
+              </div>
+            </div>
+
+            <div class="framework-card">
+              <div class="fw-header">
+                <span class="fw-code">HIPAA Security Rule</span>
+                <span class="badge badge-cyan">BAA Ready</span>
+              </div>
+              <div class="fw-body">
+                <div class="fw-cov-row"><span>Safeguards Implemented:</span><strong>36 / 36 (100%)</strong></div>
+                <div class="fw-progress-bar"><div class="fw-progress-fill" style="width: 100%; background: var(--accent-cyan);"></div></div>
+                <div class="fw-sub">Data segregation & encrypted transit enforced</div>
+              </div>
+            </div>
+
+            <div class="framework-card">
+              <div class="fw-header">
+                <span class="fw-code">GDPR Art. 28 / DPA</span>
+                <span class="badge badge-success">Compliant</span>
+              </div>
+              <div class="fw-body">
+                <div class="fw-cov-row"><span>Data Privacy Articles:</span><strong>24 / 24 (100%)</strong></div>
+                <div class="fw-progress-bar"><div class="fw-progress-fill" style="width: 100%;"></div></div>
+                <div class="fw-sub">Zero model training clause & right to erasure</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Security Controls Table & Actions -->
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+          <!-- Controls Table -->
+          <div class="card">
+            <h3 style="margin-bottom: 12px; font-size: 1.15rem;">Active Cryptographic Security Controls</h3>
+            <div class="table-responsive">
+              <table class="data-table" id="compliance-controls-table">
+                <thead>
+                  <tr>
+                    <th>Control ID</th>
+                    <th>Security Standard</th>
+                    <th>Domain</th>
+                    <th>Status</th>
+                    <th>Verification</th>
+                  </tr>
+                </thead>
+                <tbody id="compliance-controls-tbody">
+                  <!-- Dynamically populated via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- SIEM Exporter & Session Security -->
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <!-- Cryptographic SIEM Export -->
+            <div class="card">
+              <h4 style="margin: 0 0 8px 0; font-size: 1.05rem;">Real-Time SIEM Audit Export</h4>
+              <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px;">
+                Export SHA-256 cryptographically verified audit events for Splunk, Datadog, or SOC review.
+              </p>
+              <div style="display: flex; gap: 8px; flex-direction: column;">
+                <button class="btn btn-secondary" onclick="exportAuditLogs('json')">
+                  <span>📥 Download Audit Log (JSON)</span>
+                </button>
+                <button class="btn btn-secondary" onclick="exportAuditLogs('csv')">
+                  <span>📊 Download Audit Log (CSV)</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- SAML SSO / Okta Config -->
+            <div class="card">
+              <h4 style="margin: 0 0 8px 0; font-size: 1.05rem;">SAML 2.0 / Enterprise SSO</h4>
+              <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">
+                Enforce corporate identity verification via your SSO provider.
+              </p>
+              <div class="form-group" style="margin-bottom: 8px;">
+                <label style="font-size: 0.78rem;">Identity Provider</label>
+                <select class="form-select" id="sso-provider-select">
+                  <option value="okta">Okta Enterprise</option>
+                  <option value="azure">Microsoft Entra ID (Azure AD)</option>
+                  <option value="google">Google Workspace Enterprise</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin-bottom: 10px;">
+                <label style="font-size: 0.78rem;">SAML Metadata URL / Issuer</label>
+                <input type="text" class="form-input" id="sso-metadata-url" placeholder="https://your-org.okta.com/app/exk...">
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="saveSSOConfig()">Save SSO Configuration</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 10. ENTERPRISE INTEGRATIONS HUB -->
+      <section class="view-section" id="view-integrations">
+        <div class="card section-header-card">
+          <div class="enterprise-tag">ECOSYSTEM CONNECTORS</div>
+          <h2 style="margin: 4px 0 6px 0; font-size: 1.5rem;">Enterprise Integrations Hub</h2>
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0;">
+            Stream alerts, dispatch approvals, sync CRM deals, and escalate bug tickets across your enterprise stack.
+          </p>
+        </div>
+
+        <div class="integrations-grid" id="integrations-grid">
+          <!-- Populated dynamically via JS -->
+        </div>
+      </section>
+
+      <!-- 11. ENTERPRISE TEAM & SEATS VIEW -->
+      <section class="view-section" id="view-team">
+        <div class="card section-header-card">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div>
+              <div class="enterprise-tag">SEAT & ROLE GOVERNANCE</div>
+              <h2 style="margin: 4px 0 6px 0; font-size: 1.5rem;">Enterprise Organization & Team Management</h2>
+              <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0;" id="team-org-name-text">
+                Enterprise Tenant Workspace • Strict RBAC & Seat Licenses
+              </p>
+            </div>
+            <button class="btn btn-primary" onclick="openModal('modal-team-invite')">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+              <span>Invite Team Member</span>
+            </button>
+          </div>
+
+          <!-- Seat Utilization Gauge -->
+          <div class="team-seat-bar-box" style="margin-top: 18px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 6px;">
+              <span><strong>Allocated Seats:</strong> <span id="team-seats-allocated">4</span> / <span id="team-seats-total">25</span></span>
+              <span style="color: var(--accent-emerald);" id="team-seats-remaining">21 Seats Available</span>
+            </div>
+            <div class="fw-progress-bar" style="height: 8px;">
+              <div class="fw-progress-fill" id="team-seats-fill" style="width: 16%; background: var(--accent-primary);"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Team Roster Table -->
+        <div class="card">
+          <div class="table-responsive">
+            <table class="data-table" id="team-roster-table">
+              <thead>
+                <tr>
+                  <th>Member Name</th>
+                  <th>Email</th>
+                  <th>Enterprise Role</th>
+                  <th>MFA Enforced</th>
+                  <th>Last Active</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="team-roster-tbody">
+                <!-- Dynamically populated via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
       </section>
     </main>
   </div>
@@ -921,10 +1373,152 @@
         <span>Protected with PBKDF2-HMAC-SHA256 & tenant path-traversal barrier</span>
       </div>
     </div>
+<!-- MODAL: ENTERPRISE TEAM INVITE -->
+<div class="modal-overlay" id="modal-team-invite">
+  <div class="modal-box" style="max-width: 480px;">
+    <div class="modal-header">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 1.2rem;">👥</span>
+        <h3>Invite Enterprise Team Member</h3>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-team-invite')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-team-invite" onsubmit="event.preventDefault(); submitTeamInvite();">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label>Full Name</label>
+          <input type="text" class="form-input" id="invite-name" placeholder="e.g. David Zhao" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label>Corporate Work Email</label>
+          <input type="email" class="form-input" id="invite-email" placeholder="d.zhao@company.com" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label>Enterprise RBAC Role</label>
+          <select class="form-select" id="invite-role">
+            <option value="Executive Assistant">Executive Assistant (Review & Drafts)</option>
+            <option value="Security Officer">Security Officer (PromptShield & DLP Policy)</option>
+            <option value="Operations Admin">Operations Admin (Rules & Ingestion)</option>
+            <option value="Compliance Auditor">Compliance Auditor (Read-Only SIEM & Logs)</option>
+            <option value="Enterprise Owner">Enterprise Owner (Full Tenant Root)</option>
+          </select>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-team-invite')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Send Seat Invitation</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 14-DAY ENTERPRISE PILOT & SALES DEMO -->
+<div class="modal-overlay" id="modal-pilot-request">
+  <div class="modal-box" style="max-width: 500px;">
+    <div class="modal-header">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 1.2rem;">🚀</span>
+        <h3>Book 14-Day Enterprise Pilot</h3>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-pilot-request')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">
+        Launch an isolated enterprise pilot with custom IMAP/SMTP connectivity, dedicated AES-256 vault, and zero data retention BAA.
+      </p>
+      <form id="form-pilot-request" onsubmit="event.preventDefault(); submitPilotRequest();">
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label>Full Name</label>
+          <input type="text" class="form-input" id="pilot-name" placeholder="VP of Operations" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label>Work Email</label>
+          <input type="email" class="form-input" id="pilot-email" placeholder="executive@enterprise.com" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label>Company / Organization</label>
+          <input type="text" class="form-input" id="pilot-company" placeholder="Acme Global Financial" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label>Primary Deployment Requirement</label>
+          <select class="form-select" id="pilot-deployment">
+            <option value="private_cloud">AutoMail Enterprise Cloud (SOC-2 Type II)</option>
+            <option value="vpc">Dedicated AWS / GCP / Azure Private VPC</option>
+            <option value="on_prem">100% On-Premise Air-Gapped Appliance</option>
+          </select>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-pilot-request')">Cancel</button>
+          <button type="submit" class="btn btn-success">Submit Pilot Request</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: INTEGRATION CONNECTOR CONFIG -->
+<div class="modal-overlay" id="modal-integration-config">
+  <div class="modal-box" style="max-width: 520px;">
+    <div class="modal-header">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 1.2rem;" id="int-modal-icon">💬</span>
+        <h3 id="int-modal-title">Configure Connector</h3>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-integration-config')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-integration-config" onsubmit="event.preventDefault(); saveIntegrationModal();">
+        <input type="hidden" id="int-modal-id">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label>Webhook URL / Endpoint</label>
+          <input type="url" class="form-input" id="int-modal-url" placeholder="https://hooks.slack.com/services/..." required>
+        </div>
+        <div class="form-group" style="margin-bottom: 12px;" id="int-modal-channel-group">
+          <label>Destination Channel / Identifier</label>
+          <input type="text" class="form-input" id="int-modal-channel" placeholder="#executive-alerts or OPS">
+        </div>
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label class="checkbox-container" style="font-size: 0.88rem;">
+            <input type="checkbox" id="int-modal-enabled" checked>
+            <span>Enable Connector for Real-Time Dispatch</span>
+          </label>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <button type="button" class="btn btn-outline" onclick="testCurrentIntegrationWebhook()">⚡ Test Webhook</button>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('modal-integration-config')">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Configuration</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- SPOTLIGHT COMMAND PALETTE DIALOG (Ctrl+K / Cmd+K) -->
+<div class="command-palette-backdrop" id="dialog-command-palette" onclick="handlePaletteBackdropClick(event)">
+  <div class="command-palette-box">
+    <div class="palette-input-row">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+      <input type="text" id="palette-search-input" placeholder="Type a command, search emails, jump to view, or query RAG..." autocomplete="off">
+      <span class="palette-esc-badge" onclick="closeCommandPalette()">ESC</span>
+    </div>
+
+    <div class="palette-results-container" id="palette-results-container">
+      <!-- Dynamically filled with search and shortcut actions -->
+    </div>
+
+    <div class="palette-footer">
+      <span><kbd>↑</kbd> <kbd>↓</kbd> Navigate</span>
+      <span><kbd>↵</kbd> Select</span>
+      <span><kbd>ESC</kbd> Close</span>
+      <span style="margin-left: auto; color: var(--accent-emerald);">⚡ Universal Enterprise Command Engine</span>
+    </div>
   </div>
 </div>
 
 <!-- TOAST CONTAINER -->
+
 <div id="toast-container"></div>
 
 <script src="/static/app.js"></script>

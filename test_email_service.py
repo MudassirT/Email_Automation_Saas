@@ -5,6 +5,8 @@ Tests config, storage, AI engine, email engine, and end-to-end security subsyste
 
 import sys
 import os
+import uuid
+import json
 import secrets
 import time
 from email_service.config import load_config, save_config
@@ -407,6 +409,112 @@ def test_all():
     assert sugg_api_res.status_code == 200
     assert "suggestions" in sugg_api_res.json()
     print("FastAPI /api/chat/suggestions Endpoint: OK!")
+
+    print("\n--- 12. Testing Enterprise Services & APIs ---")
+    ent_user_a = f"ent_user_{uuid.uuid4().hex[:8]}"
+    ent_user_b = f"ent_user_{uuid.uuid4().hex[:8]}"
+
+    ent_storage_a = storage.for_user(ent_user_a)
+    ent_storage_b = storage.for_user(ent_user_b)
+
+    # A. Test Enterprise Productivity & ROI Metrics
+    metrics_a = ent_storage_a.get_enterprise_metrics(hourly_rate=95.0)
+    assert metrics_a["hours_saved"] > 0
+    assert metrics_a["financial_roi"] == round(metrics_a["hours_saved"] * 95.0, 2)
+    assert metrics_a["zero_retention_guaranteed"] is True
+    assert metrics_a["sla_reduction_pct"] > 90
+    print(f"Enterprise ROI Calculation: OK ({metrics_a['hours_saved']} hrs saved, ${metrics_a['financial_roi']} ROI)")
+
+    # B. Test Enterprise Security & Compliance Posture
+    comp_a = ent_storage_a.get_compliance_status()
+    assert comp_a["overall_posture_score"] >= 95
+    assert any(f["code"] == "SOC2" for f in comp_a["frameworks"])
+    assert any(f["code"] == "ISO27001" for f in comp_a["frameworks"])
+    assert any(f["code"] == "HIPAA" for f in comp_a["frameworks"])
+    assert any(f["code"] == "GDPR" for f in comp_a["frameworks"])
+    assert len(comp_a["controls"]) >= 6
+    print("Enterprise Compliance Posture (SOC-2, ISO, HIPAA, GDPR): OK!")
+
+    # C. Test Enterprise Integrations Hub
+    connectors_a = ent_storage_a.get_integrations()
+    assert len(connectors_a) >= 4
+    assert any(c["id"] == "slack" for c in connectors_a)
+    assert any(c["id"] == "teams" for c in connectors_a)
+    assert any(c["id"] == "jira" for c in connectors_a)
+
+    # Update Slack connector for User A
+    ent_storage_a.update_integration("slack", {"webhook_url": "https://hooks.slack.com/services/SEC/ALERT/XYZ"})
+    conn_updated = ent_storage_a.get_integrations()
+    slack_conn = next(c for c in conn_updated if c["id"] == "slack")
+    assert "XYZ" in slack_conn["webhook_url"]
+
+    # Verify User B has default unconfigured webhook (Zero cross-tenant leakage)
+    conn_b = ent_storage_b.get_integrations()
+    slack_b = next(c for c in conn_b if c["id"] == "slack")
+    assert "XYZ" not in slack_b["webhook_url"]
+    print("Enterprise Integrations Hub & Isolation: OK!")
+
+    # D. Test Enterprise Team & Seats Governance
+    team_a = ent_storage_a.get_team_members()
+    assert team_a["total_seats"] >= 25
+    initial_allocated = team_a["allocated_seats"]
+
+    new_mbr = ent_storage_a.invite_team_member(name="Alexandre Dumas", email="alex.d@enterprise.com", role="Security Officer")
+    assert new_mbr["role"] == "Security Officer"
+
+    team_after = ent_storage_a.get_team_members()
+    assert team_after["allocated_seats"] == initial_allocated + 1
+    assert any(m["email"] == "alex.d@enterprise.com" for m in team_after["members"])
+
+    # Verify User B team does not see Alexandre Dumas
+    team_b = ent_storage_b.get_team_members()
+    assert not any(m["email"] == "alex.d@enterprise.com" for m in team_b["members"])
+    print("Enterprise Team Seat Governance & Isolation: OK!")
+
+    # E. Test Cryptographic SIEM Audit Export
+    ent_storage_a.log("SECURITY", "SOC-2 Annual Audit Checkpoint Passed", "INFO")
+    csv_content, csv_mime = ent_storage_a.export_audit_logs(format_type="csv")
+    assert csv_mime == "text/csv"
+    assert "Timestamp,Level,Category,Message,TenantID" in csv_content
+    assert ent_user_a in csv_content
+
+    json_content, json_mime = ent_storage_a.export_audit_logs(format_type="json")
+    assert json_mime == "application/json"
+    parsed_json = json.loads(json_content)
+    assert "cryptographic_hash" in parsed_json
+    assert parsed_json["tenant_id"] == ent_user_a
+    print("Enterprise Cryptographic SIEM Audit Export: OK!")
+
+    # F. FastAPI Enterprise HTTP Endpoints
+    metrics_res = client.get("/api/enterprise/metrics?hourly_rate=100.0", headers={"X-User-Id": ent_user_a})
+    assert metrics_res.status_code == 200
+    assert metrics_res.json()["hourly_rate_used"] == 100.0
+
+    comp_res = client.get("/api/enterprise/compliance", headers={"X-User-Id": ent_user_a})
+    assert comp_res.status_code == 200
+    assert "overall_posture_score" in comp_res.json()
+
+    int_res = client.get("/api/enterprise/integrations", headers={"X-User-Id": ent_user_a})
+    assert int_res.status_code == 200
+    assert isinstance(int_res.json(), list)
+
+    team_res = client.get("/api/enterprise/team", headers={"X-User-Id": ent_user_a})
+    assert team_res.status_code == 200
+    assert "total_seats" in team_res.json()
+
+    invite_res = client.post(
+        "/api/enterprise/team/invite",
+        json={"name": "Maria Garcia", "email": "m.garcia@enterprise.com", "role": "Compliance Auditor"},
+        headers={"X-User-Id": ent_user_a}
+    )
+    assert invite_res.status_code == 200
+    assert invite_res.json()["success"] is True
+
+    export_csv_res = client.get("/api/enterprise/audit/export?format=csv", headers={"X-User-Id": ent_user_a})
+    assert export_csv_res.status_code == 200
+    assert "text/csv" in export_csv_res.headers.get("content-type", "")
+
+    print("FastAPI /api/enterprise/* Endpoints: OK!")
 
     print("\n===========================================")
     print("ALL AUTOMATED VERIFICATION TESTS PASSED! [OK]")

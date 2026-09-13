@@ -211,6 +211,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   initNav();
   initModals();
   initActions();
+  initFloatingChat();
   initUserSwitcher();
   initProviderPresets();
   updateEnterpriseROI();
@@ -272,6 +273,12 @@ function initNav() {
 }
 
 function switchView(viewName) {
+  // If user triggers chat via link or palette, open the floating AI assistant widget
+  if (viewName === "chat") {
+    openFloatingChat();
+    return;
+  }
+
   // Admin Guard: require valid admin session token
   if (viewName === "admin" && !getAdminToken()) {
     openAdminLoginModal();
@@ -552,7 +559,6 @@ async function loadAllData(showToasts = true) {
   else if (currentView === "rules") loadRules();
   else if (currentView === "sent") loadSent();
   else if (currentView === "logs") loadLogs();
-  else if (currentView === "chat") loadChatView(false);
   else if (currentView === "landing") updateEnterpriseROI();
   else if (currentView === "compliance") loadComplianceView();
   else if (currentView === "integrations") loadIntegrationsView();
@@ -2129,6 +2135,80 @@ async function handleSignOutOrOpen() {
 let _chatHistory = [];
 let _isChatSending = false;
 
+function isFloatingChatOpen() {
+  const win = document.getElementById("floating-chat-window");
+  return win ? win.classList.contains("active") : false;
+}
+
+function toggleFloatingChat() {
+  if (isFloatingChatOpen()) {
+    closeFloatingChat();
+  } else {
+    openFloatingChat();
+  }
+}
+
+function openFloatingChat() {
+  const win = document.getElementById("floating-chat-window");
+  const btn = document.getElementById("btn-floating-chat");
+  if (!win) return;
+
+  win.classList.add("active");
+  if (btn) btn.classList.add("active");
+
+  loadChatView(true);
+
+  // Focus input and scroll messages to bottom smoothly
+  setTimeout(() => {
+    const input = document.getElementById("chat-query-input");
+    if (input) input.focus();
+    const container = document.getElementById("chat-messages-container");
+    if (container) container.scrollTop = container.scrollHeight;
+  }, 120);
+}
+
+function closeFloatingChat() {
+  const win = document.getElementById("floating-chat-window");
+  const btn = document.getElementById("btn-floating-chat");
+  if (win) win.classList.remove("active");
+  if (btn) btn.classList.remove("active");
+}
+
+function initFloatingChat() {
+  const btnLauncher = document.getElementById("btn-floating-chat");
+  if (btnLauncher) {
+    btnLauncher.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleFloatingChat();
+    });
+  }
+
+  const btnClose = document.getElementById("btn-close-floating-chat");
+  if (btnClose) {
+    btnClose.addEventListener("click", (e) => {
+      e.stopPropagation();
+      closeFloatingChat();
+    });
+  }
+
+  // Close when pressing Escape if open
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && isFloatingChatOpen()) {
+      closeFloatingChat();
+    }
+  });
+
+  // Close when clicking outside of the floating widget
+  document.addEventListener("click", (e) => {
+    if (!isFloatingChatOpen()) return;
+    const win = document.getElementById("floating-chat-window");
+    const launcher = document.getElementById("btn-floating-chat");
+    if (win && !win.contains(e.target) && launcher && !launcher.contains(e.target)) {
+      closeFloatingChat();
+    }
+  });
+}
+
 async function loadChatView(refreshSuggestions = true) {
   const activeId = localStorage.getItem("automail_user_id") || "default";
   const chatWsText = document.getElementById("chat-active-workspace-text");
@@ -2763,7 +2843,7 @@ const COMMAND_PALETTE_ITEMS = [
   { category: "Navigation", icon: "📬", title: "Inbox & Email Threads", desc: "Categorized threads and executive briefings", action: () => switchView("inbox") },
   { category: "Navigation", icon: "⏳", title: "Approval Queue", desc: "Human-in-the-loop pending replies", action: () => switchView("approvals") },
   { category: "Navigation", icon: "⚡", title: "Automation Rules", desc: "Custom automated triggers & tone policies", action: () => switchView("rules") },
-  { category: "Navigation", icon: "🤖", title: "AI Copilot (RAG)", desc: "Query private workspace with RAG assistant", action: () => switchView("chat") },
+  { category: "Navigation", icon: "🤖", title: "AI Copilot (RAG)", desc: "Open floating private RAG AI assistant widget", action: () => openFloatingChat() },
   { category: "Navigation", icon: "🏢", title: "Enterprise Showcase & ROI Simulator", desc: "Public-facing capabilities and cost savings calculator", action: () => switchView("landing") },
   { category: "Navigation", icon: "🛡️", title: "Security & Compliance Center", desc: "SOC-2, ISO 27001, SIEM export, and SAML SSO", action: () => switchView("compliance") },
   { category: "Navigation", icon: "🔌", title: "Enterprise Integrations Hub", desc: "Slack, Microsoft Teams, Jira, and Salesforce connectors", action: () => switchView("integrations") },
@@ -2814,7 +2894,7 @@ function renderPaletteResults(query) {
     container.innerHTML = `
       <div style="padding: 16px; text-align: center;">
         <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 12px;">No command found matching "<em>${escapeHtml(query)}</em>"</div>
-        <button class="btn btn-primary" onclick="closeCommandPalette(); switchView('chat'); setTimeout(()=>{ document.getElementById('chat-query-input').value = '${escapeHtml(query)}'; submitChatQuery(); }, 150);">
+        <button class="btn btn-primary" onclick="closeCommandPalette(); openFloatingChat(); setTimeout(()=>{ const inp = document.getElementById('chat-query-input'); if (inp) { inp.value = '${escapeHtml(query).replace(/'/g, "\\'")}'; submitChatQuery(); } }, 150);">
           <span>🤖 Ask AI Copilot: "${escapeHtml(query)}"</span>
         </button>
       </div>

@@ -89,12 +89,6 @@
       </a>
 
       <div class="nav-section-label" style="margin-top: 14px;">INTELLIGENCE & SEC</div>
-      <a class="nav-item" data-view="chat" id="nav-chat">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
-        <span>AI Copilot (RAG)</span>
-        <span class="nav-badge" style="background: rgba(99, 102, 241, 0.2); color: var(--accent-secondary); border-color: rgba(99, 102, 241, 0.4);">RAG</span>
-      </a>
-
       <a class="nav-item" data-view="compliance" id="nav-compliance">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
         <span>Security & Compliance</span>
@@ -665,80 +659,6 @@
         </div>
       </section>
 
-      <!-- 9. AI COPILOT / RAG CHATBOT VIEW -->
-      <section class="view-section" id="view-chat">
-        <div class="chat-container">
-          <!-- Chat Header Bar -->
-          <div class="chat-header-bar">
-            <div class="chat-header-info">
-              <div class="chat-avatar-badge">🤖</div>
-              <div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <h3 style="margin: 0; font-size: 1.12rem; font-weight: 700; color: var(--text-main);">AutoMail AI Copilot (RAG)</h3>
-                  <span class="badge badge-primary" style="font-size: 0.68rem;">Trained RAG Engine</span>
-                </div>
-                <div class="chat-header-sub">
-                  <span class="status-dot" style="background: var(--accent-emerald); width: 7px; height: 7px;"></span>
-                  <span id="chat-active-workspace-text">Indexing Active Workspace: default</span>
-                  <span>• 100% Zero Cross-User Exposure Guarantee</span>
-                </div>
-              </div>
-            </div>
-            <div class="chat-header-actions">
-              <button class="btn btn-secondary btn-sm" id="btn-chat-refresh-suggestions" onclick="loadChatSuggestions()" title="Refresh smart mailbox prompts">
-                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                <span>Suggestions</span>
-              </button>
-              <button class="btn btn-secondary btn-sm" id="btn-chat-clear" onclick="clearChatHistory()" title="Clear conversation stream">
-                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                <span>Clear</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Quick Context Suggestions Pills -->
-          <div class="chat-suggestions-bar" id="chat-suggestions-container">
-            <span style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; font-weight: 600; padding: 4px 6px;">Suggested:</span>
-            <!-- Dynamically populated via JS -->
-          </div>
-
-          <!-- Messages Scroll View -->
-          <div class="chat-messages-container" id="chat-messages-container">
-            <!-- Welcome message from AI Copilot -->
-            <div class="chat-message-row ai">
-              <div class="chat-avatar-circle">🤖</div>
-              <div class="chat-bubble-wrapper">
-                <div class="chat-bubble ai">
-                  <div class="chat-bubble-author">AutoMail AI Copilot</div>
-                  <p>Hello! I am your <strong>Executive RAG Assistant</strong>. I have indexed your private workspace—including all your incoming emails, executive briefings, extracted tasks, approval drafts, active automation rules, and system configuration.</p>
-                  <p style="margin-top: 6px; font-size: 0.85rem; color: var(--text-dim);">Ask me anything about your current mailbox, search for specific customer requests, check pending actions, or inquire about system capabilities.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Chat Input Controls -->
-          <div class="chat-input-area">
-            <form id="form-chat-input" onsubmit="event.preventDefault(); submitChatQuery();">
-              <div class="chat-input-box">
-                <input 
-                  type="text" 
-                  class="chat-input" 
-                  id="chat-query-input" 
-                  placeholder="Ask anything about your emails, tasks, drafts, or system rules... (e.g. 'What did Alex say about the outage?')" 
-                  autocomplete="off"
-                />
-                <button type="submit" class="btn btn-primary chat-submit-btn" id="btn-chat-send">
-                  <span>Send</span>
-                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-                </button>
-              </div>
-            </form>
-            <div class="chat-footer-caption">
-              <span>🔒 100% Private to your workspace • Adversarial PromptShield active • Dual-Mode Gemini + Built-in RAG</span>
-            </div>
-          </div>
-        </div>
       <!-- 8. ENTERPRISE SHOWCASE & LANDING VIEW -->
       <section class="view-section" id="view-landing">
         <div class="enterprise-hero-card">
@@ -1562,6 +1482,96 @@
       <span><kbd>↵</kbd> Select</span>
       <span><kbd>ESC</kbd> Close</span>
       <span style="margin-left: auto; color: var(--accent-emerald);">⚡ Universal Enterprise Command Engine</span>
+    </div>
+  </div>
+</div>
+
+<!-- FLOATING RAG CHATBOT WIDGET (BOTTOM-RIGHT) -->
+<div class="floating-chat-container">
+  <!-- Launcher Button -->
+  <button class="floating-chat-launcher" id="btn-floating-chat" title="Ask AutoMail AI Copilot (RAG)" aria-label="Open AI Copilot Chat">
+    <div class="floating-chat-icon-wrapper">
+      <svg class="icon-chat-bubble" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+      </svg>
+      <svg class="icon-chat-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </div>
+    <span class="floating-chat-pulse" title="AI Copilot Online"></span>
+    <span class="floating-chat-tooltip">Ask AI Copilot (RAG)</span>
+  </button>
+
+  <!-- Floating Chat Window -->
+  <div class="floating-chat-window" id="floating-chat-window">
+    <div class="chat-header-bar">
+      <div class="chat-header-info">
+        <div class="chat-avatar-badge">🤖</div>
+        <div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--text-main);">AutoMail AI Copilot</h3>
+            <span class="badge badge-primary" style="font-size: 0.65rem; padding: 2px 6px;">RAG Engine</span>
+          </div>
+          <div class="chat-header-sub">
+            <span class="status-dot" style="background: var(--accent-emerald); width: 6px; height: 6px;"></span>
+            <span id="chat-active-workspace-text">Indexing Active Workspace: default</span>
+          </div>
+        </div>
+      </div>
+      <div class="chat-header-actions">
+        <button class="btn btn-secondary btn-sm btn-icon" id="btn-chat-refresh-suggestions" onclick="loadChatSuggestions()" title="Refresh smart mailbox prompts">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        </button>
+        <button class="btn btn-secondary btn-sm btn-icon" id="btn-chat-clear" onclick="clearChatHistory()" title="Clear conversation stream">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        </button>
+        <button class="btn btn-secondary btn-sm btn-icon" id="btn-close-floating-chat" onclick="closeFloatingChat()" title="Minimize Chat Window">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Quick Context Suggestions Pills -->
+    <div class="chat-suggestions-bar" id="chat-suggestions-container">
+      <span style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; font-weight: 600; padding: 4px 6px;">Suggested:</span>
+      <!-- Dynamically populated via JS -->
+    </div>
+
+    <!-- Messages Scroll View -->
+    <div class="chat-messages-container" id="chat-messages-container">
+      <!-- Welcome message from AI Copilot -->
+      <div class="chat-message-row ai">
+        <div class="chat-avatar-circle">🤖</div>
+        <div class="chat-bubble-wrapper">
+          <div class="chat-bubble ai">
+            <div class="chat-bubble-author">AutoMail AI Copilot</div>
+            <p>Hello! I am your <strong>Executive RAG Assistant</strong>. I have indexed your private workspace—including all incoming emails, briefings, extracted tasks, approval drafts, and active automation rules.</p>
+            <p style="margin-top: 6px; font-size: 0.82rem; color: var(--text-dim);">Ask me anything about your current mailbox or system capabilities.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat Input Controls -->
+    <div class="chat-input-area">
+      <form id="form-chat-input" onsubmit="event.preventDefault(); submitChatQuery();">
+        <div class="chat-input-box">
+          <input 
+            type="text" 
+            class="chat-input" 
+            id="chat-query-input" 
+            placeholder="Ask AI Copilot about your emails, tasks, rules..." 
+            autocomplete="off"
+          />
+          <button type="submit" class="btn btn-primary chat-submit-btn" id="btn-chat-send">
+            <span>Send</span>
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </button>
+        </div>
+      </form>
+      <div class="chat-footer-caption">
+        <span>🔒 100% Private Workspace • Adversarial PromptShield Active</span>
+      </div>
     </div>
   </div>
 </div>

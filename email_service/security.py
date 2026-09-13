@@ -14,14 +14,16 @@ import time
 import base64
 from pathlib import Path
 from typing import Tuple, Dict, List, Optional
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from cryptography.hazmat.primitives import hashes
 
 DATA_DIR = Path(__file__).parent / "data"
 KEY_FILE = DATA_DIR / ".vault_key"
 
 
 class SecretVault:
-    """Manages encryption and decryption of credentials on disk."""
+    """Manages encryption and decryption of credentials on disk with tenant envelope keys."""
     
     def __init__(self):
         DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -48,6 +50,61 @@ class SecretVault:
         except Exception:
             pass
         return new_key
+
+    def derive_tenant_key(self, org_id: str, salt: str, version: int = 1) -> bytes:
+        """
+        Derives an organization-isolated 256-bit Fernet encryption key using HKDF-SHA256.
+        Bound to org_id and key_version to support zero-downtime rotation.
+        """
+        info = f"automail:{org_id}:v{version}".encode("utf-8")
+        salt_bytes = salt.encode("utf-8") if isinstance(salt, str) else salt
+        hkdf = HKDF(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=salt_bytes,
+            info=info,
+        )
+        derived_raw = hkdf.derive(self.key)
+        return base64.urlsafe_b64encode(derived_raw)
+
+    def encrypt_for_tenant(self, plain_text: str, org_id: str, salt: str, version: int = 1) -> str:
+        """Encrypt secret using organization's envelope key with versioning prefix."""
+        if not plain_text:
+            return ""
+        try:
+            tenant_key = self.derive_tenant_key(org_id, salt, version)
+            tenant_cipher = Fernet(tenant_key)
+            encrypted = tenant_cipher.encrypt(plain_text.encode("utf-8")).decode("utf-8")
+            return f"ENC::v{version}::{encrypted}"
+        except Exception:
+            return plain_text
+
+    def decrypt_for_tenant(self, encrypted_text: str, org_id: str, salt: str, version: Optional[int] = None) -> str:
+        """Decrypt secret using organization's envelope key, auto-detecting key_version."""
+        if not encrypted_text:
+            return ""
+        if not encrypted_text.startswith("ENC::"):
+            return encrypted_text
+        
+        token = encrypted_text[5:]
+        eff_version = version or 1
+        
+        # Check if version is encoded in format ENC::v{version}::{token}
+        if token.startswith("v") and "::" in token:
+            v_str, actual_token = token.split("::", 1)
+            try:
+                eff_version = int(v_str[1:])
+                token = actual_token
+            except ValueError:
+                pass
+
+        try:
+            tenant_key = self.derive_tenant_key(org_id, salt, eff_version)
+            tenant_cipher = Fernet(tenant_key)
+            return tenant_cipher.decrypt(token.encode("utf-8")).decode("utf-8")
+        except Exception:
+            # Fallback to master cipher in case it was encrypted with legacy global key
+            return self.decrypt(encrypted_text)
 
     def encrypt(self, plain_text: str) -> str:
         if not plain_text:

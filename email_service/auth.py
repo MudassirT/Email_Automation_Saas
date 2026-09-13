@@ -35,8 +35,39 @@ DATA_DIR = Path(__file__).parent / "data"
 USERS_FILE = DATA_DIR / "users.json"
 _user_lock = threading.Lock()
 
-# Configuration Secrets
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "automail_secure_jwt_secret_key_default_2026")
+# Environment & Configuration Secrets
+APP_ENV = os.getenv("ENVIRONMENT") or os.getenv("APP_ENV") or os.getenv("ENV") or "development"
+APP_ENV = APP_ENV.strip().lower()
+
+_raw_jwt_key = os.getenv("JWT_SECRET_KEY", "").strip()
+
+INSECURE_DEFAULT_KEYS = {
+    "",
+    "automail_secure_jwt_secret_key_default_2026",
+    "your_jwt_secret_key_here",
+    "change_this_in_production",
+    "automail_secure_jwt_secret_key_8f93e4b7c12d56a0",
+    "secret",
+    "default"
+}
+
+def validate_jwt_secret():
+    """
+    Enforces that non-dev environments fail immediately on unset or default JWT_SECRET_KEY.
+    Prevents silent fallback vulnerabilities in production.
+    """
+    if APP_ENV not in ("development", "dev", "test", "testing", "local"):
+        if not _raw_jwt_key or _raw_jwt_key in INSECURE_DEFAULT_KEYS or len(_raw_jwt_key) < 32:
+            raise RuntimeError(
+                f"FATAL SECURITY VIOLATION: In environment '{APP_ENV}', JWT_SECRET_KEY must be "
+                f"an explicitly configured, cryptographically strong secret (minimum 32 characters). "
+                f"Silent fallback is prohibited. Server startup aborted."
+            )
+
+# Execute hard validation check at startup
+validate_jwt_secret()
+
+JWT_SECRET_KEY = _raw_jwt_key if _raw_jwt_key else "automail_secure_jwt_secret_key_default_2026"
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_SECONDS = 30 * 24 * 3600  # 30 days
 

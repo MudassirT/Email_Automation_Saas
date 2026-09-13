@@ -26,6 +26,8 @@ email_service/data/state.json
 email_service/data/tenants/
 email_service/data/*.json
 email_service/data/*.key
+email_service/data/*.db
+*.db
 
 # Logs & Temporary Files
 *.log

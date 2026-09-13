@@ -733,8 +733,15 @@ def get_storage(user_id: str = "default") -> StorageManager:
         return _storage_cache[clean_id]
 
 
+STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "json").strip().lower()
+
+
 class StorageProxy:
     """Provides backward-compatible attribute access to default storage and .for_user(user_id)."""
+    @property
+    def backend_type(self) -> str:
+        return STORAGE_BACKEND
+
     def __getattr__(self, name):
         return getattr(get_storage("default"), name)
 

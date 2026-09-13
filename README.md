@@ -84,21 +84,52 @@ Click **"Simulate Email"** in the top bar to test:
 
 ---
 
+## Multi-Tenancy & Relational Architecture (Phase 1)
+
+AutoMail AI includes a production-grade multi-tenant data architecture built on **SQLAlchemy 2.0 Async** (supporting PostgreSQL via `asyncpg` in production and SQLite via `aiosqlite` for zero-friction local development):
+
+- **Organizations (`organizations`)**: Root tenant entity with subscription tiers (`free`, `pro`, `enterprise`), seat caps, and per-organization cryptographic envelope salt.
+- **Zero-Downtime Envelope Key Rotation (`key_version`)**: Per-org Fernet vault keys are derived using PBKDF2/HKDF-SHA256(`MasterKey`, `Salt`, `OrgID`, `key_version`). Rotating keys requires zero schema changes.
+- **Strict Hard Startup Security Gate**: The server refuses to boot in non-dev environments if `JWT_SECRET_KEY` is missing, default, or under 32 characters.
+- **SOC-2 Forensic Integrity (`redacted_payload` + `payload_hash`)**: Audit logs retain actual sanitized payloads alongside a SHA-256 HMAC cryptographic checksum.
+- **Idempotent JSON-to-Postgres Migration**:
+  ```bash
+  # Dry-run mode (safe simulation without committing changes):
+  python -m email_service.db.migrate_json_to_postgres --dry-run
+
+  # Live idempotent migration:
+  python -m email_service.db.migrate_json_to_postgres
+  ```
+- **Distributed Redis Cache & Rate Limiting (`redis_client.py`)**: Sliding-window rate limiting across horizontal replicas with fast JWT revocation blacklist and graceful local memory fallback.
+
+---
+
 ## Project Structure
 
 ```
 ├── email_service/
 │   ├── config.py         # Encrypted settings & credentials management
-│   ├── security.py       # Fernet vault, PromptShield, DataLeakPreventer, RateLimiters
-│   ├── storage.py        # Local persistent state (emails, drafts, rules, logs)
+│   ├── security.py       # Envelope Fernet vault, PromptShield, DataLeakPreventer, RateLimiters
+│   ├── storage.py        # Dual storage engine abstraction (JSON & Postgres feature flag)
+│   ├── auth.py           # PBKDF2 hashing, JWT sessions with hard startup gate, Google OAuth
 │   ├── ai_engine.py      # Gemini API & smart built-in heuristic AI engine
 │   ├── email_engine.py   # IMAP receiver, SMTP dispatcher, rules processor
+│   ├── rag_engine.py     # Multi-tenant RAG chatbot with private workspace context
 │   ├── server.py         # FastAPI REST API & static file server with security middleware
+│   ├── db/               # Relational database layer
+│   │   ├── models.py     # SQLAlchemy 2.0 async models (9 multi-tenant tables & cascades)
+│   │   ├── session.py    # Async engine & session factory with connection tuning
+│   │   ├── repositories.py # Asynchronous domain repositories
+│   │   ├── redis_client.py # Distributed Redis rate limiter & token revocation blacklist
+│   │   └── migrate_json_to_postgres.py # Idempotent migration utility with dry-run
 │   ├── static/           # Modern Web Dashboard (HTML, CSS, JS)
 │   └── data/             # Persistent encrypted state & vault key
-├── start_email_service.bat  # 1-click launcher
-├── test_email_service.py    # Automated test suite (with security tests)
-├── requirements.txt         # Clean dependencies list
+├── start_email_service.bat        # 1-click launcher
+├── test_phase1_multitenancy.py    # Phase 1 multi-tenancy & database integration test suite
+├── test_full_system_verification.py # Full system end-to-end verification suite
+├── test_qa_suite.py               # Professional QA engineer test suite
+├── test_email_service.py          # Core automated unit & security test suite
+├── requirements.txt               # Clean dependencies list
 └── README.md
 ```
 
@@ -106,8 +137,18 @@ Click **"Simulate Email"** in the top bar to test:
 
 ## Verification Tests
 
-Run the automated test suite anytime:
+Run the full verification suite anytime:
 ```bash
+# Phase 1 Multi-Tenancy, Encryption, Schema & Migration Test Suite:
+python test_phase1_multitenancy.py
+
+# Full End-to-End Live HTTP Verification:
+python test_full_system_verification.py
+
+# QA Engineer System Integrity Suite:
+python test_qa_suite.py
+
+# Core Security & Diagnostic Suite:
 python test_email_service.py
 ```
-Output: `ALL AUTOMATED VERIFICATION TESTS PASSED! [OK]`
+Output: `ALL TESTS PASSED WITH ZERO ERRORS! [OK]`

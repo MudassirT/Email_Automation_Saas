@@ -102,6 +102,7 @@ Your browser will automatically open to **http://localhost:8000**.
 ### 2. Configure Settings
 1. Navigate to **Settings & Keys** in the web dashboard.
 2. Enter your Gmail address and 16-character [Google App Password](https://myaccount.google.com/apppasswords).
+   > 📖 **Need help connecting Gmail?** See our complete step-by-step [Gmail Connection Guide](GMAIL_CONNECTION_GUIDE.md) with troubleshooting & FAQ.
 3. (Optional) Enter your Google Gemini API key.
 4. Click **"Test Connection Diagnostics"** and **"Save & Apply Settings"**.
 

@@ -299,37 +299,37 @@ function switchView(viewName) {
 
   // Update Title
   const titles = {
-    overview: "🏠 Overview",
-    inbox: "📬 Inbox",
-    approvals: "⏳ Waiting for Your OK",
-    rules: "⚡ Smart AI Rules",
-    sent: "🚀 Sent Emails",
-    logs: "📋 Activity History",
-    chat: "🤖 AI Helper Chat",
-    landing: "💡 Time & Money Saved",
-    compliance: "🛡️ Safety & Privacy",
-    integrations: "🔌 Connected Apps",
-    team: "👥 Team Members",
-    settings: "⚙️ Settings",
-    admin: "🔒 Admin Console"
+    overview: "Home Overview",
+    inbox: "Inbox",
+    approvals: "Waiting for Your OK",
+    rules: "Smart AI Rules",
+    sent: "Sent Emails",
+    logs: "Activity History",
+    chat: "AI Assistant Copilot",
+    landing: "Time & Money Saved",
+    compliance: "Security & Privacy Shield",
+    integrations: "Connected Apps",
+    team: "Team Members",
+    settings: "Settings",
+    admin: "Admin Console"
   };
   const titleEl = document.getElementById("current-view-title");
   if (titleEl) titleEl.textContent = titles[viewName] || "Dashboard";
 
   const breadcrumbs = {
-    overview: "See how your AI helper is doing today",
-    inbox: "Emails sorted into clear, friendly folders",
-    approvals: "Review drafts before they are sent",
-    rules: "Automatic recipes that save you time",
-    sent: "Emails delivered safely",
-    logs: "Everything your AI helper did step-by-step",
-    chat: "Ask questions or search emails quickly",
-    landing: "See how much time and money you save",
-    compliance: "Your emails and passwords are secure and private",
-    integrations: "Connect with Slack, Teams, and more",
-    team: "People who have access to this space",
-    settings: "Connect your email address and customize AI",
-    admin: "Monitor system health and accounts"
+    overview: "Everything you need to know about your inbox",
+    inbox: "Incoming messages categorized and prioritized",
+    approvals: "Drafted responses awaiting your approval",
+    rules: "Custom automation recipes and inbox filters",
+    sent: "Safely delivered messages and responses",
+    logs: "Audit trail of all autonomous and human actions",
+    chat: "Interact with the retrieval-augmented AI engine",
+    landing: "Executive metrics on hours and capital saved",
+    compliance: "Multi-tenant isolation and SOC-2 safeguards",
+    integrations: "Webhook and API connectors for workspace tools",
+    team: "Authorized accounts and RBAC permission roles",
+    settings: "Configure mailboxes, API credentials, and sync settings",
+    admin: "Enterprise health, accounts, and system telemetry"
   };
   const crumbEl = document.getElementById("current-view-breadcrumb");
   if (crumbEl) crumbEl.textContent = breadcrumbs[viewName] || "Dashboard";
@@ -603,22 +603,32 @@ async function loadOverview() {
     const approvals = await resAppr.json();
     const container = document.getElementById("overview-pending-list");
     if (container) {
-      if (approvals.length === 0) {
+      if (!approvals || approvals.length === 0) {
         container.innerHTML = `
-          <div class="friendly-empty-card">
-            <div class="friendly-empty-icon">🎉</div>
-            <div class="friendly-empty-title">All Caught Up!</div>
-            <p class="friendly-empty-desc">No drafts are waiting for your OK. You're completely free to relax!</p>
+          <div class="panel-empty-state">
+            <div class="empty-state-icon">
+              <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div class="empty-state-title">No pending approvals</div>
+            <p class="empty-state-desc">You're all caught up. When AutoMail creates an AI draft that needs review, it will appear here.</p>
+            <button class="btn btn-secondary btn-sm empty-state-btn" onclick="triggerSync()">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              <span>Check for New Emails</span>
+            </button>
           </div>
         `;
       } else {
         container.innerHTML = approvals.slice(0, 3).map(appr => `
-          <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px; display: flex; justify-content: space-between; align-items: center;">
-            <div style="max-width: 70%;">
-              <div style="font-weight: 600; font-size: 0.88rem; color: #fff; margin-bottom: 2px;">${escapeHtml(appr.subject)}</div>
-              <div style="font-size: 0.75rem; color: var(--text-muted);">To: ${escapeHtml(appr.recipient)}</div>
+          <div class="overview-draft-card">
+            <div class="draft-card-main">
+              <div class="draft-card-recipient">To: <span class="recipient-val">${escapeHtml(appr.recipient)}</span></div>
+              <div class="draft-card-subject">${escapeHtml(appr.subject)}</div>
+              <div class="draft-card-meta">
+                <span class="badge badge-category" style="font-size: 0.68rem;">${escapeHtml(appr.category || 'Inquiry')}</span>
+                <span class="draft-card-time">${escapeHtml((appr.created_at || '').substring(0, 16) || 'Pending review')}</span>
+              </div>
             </div>
-            <button class="btn btn-primary btn-sm" onclick="switchView('approvals')">👀 Review & Say OK</button>
+            <button class="btn btn-primary btn-sm" onclick="switchView('approvals')">Review & Send</button>
           </div>
         `).join("");
       }
@@ -629,13 +639,29 @@ async function loadOverview() {
     const logs = await resLogs.json();
     const logsContainer = document.getElementById("overview-logs-list");
     if (logsContainer) {
-      logsContainer.innerHTML = logs.map(l => `
-        <div style="display: flex; gap: 8px; align-items: center;">
-          <span style="color: var(--text-dim); font-size: 0.74rem;">${escapeHtml(l.timestamp.split(" ")[1] || l.timestamp)}</span>
-          <span class="badge ${l.level === 'SUCCESS' ? 'badge-success' : l.level === 'ERROR' ? 'badge-urgent' : 'badge-category'}" style="font-size: 0.65rem;">${escapeHtml(l.category)}</span>
-          <span style="color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(l.message)}</span>
-        </div>
-      `).join("");
+      if (!logs || logs.length === 0) {
+        logsContainer.innerHTML = `
+          <div class="panel-empty-state">
+            <div class="empty-state-icon">
+              <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <div class="empty-state-title">No recent activity</div>
+            <p class="empty-state-desc">Your AI activity will appear here as AutoMail processes incoming messages and drafts replies.</p>
+            <button class="btn btn-secondary btn-sm empty-state-btn" onclick="switchView('logs')">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+              <span>View Full History</span>
+            </button>
+          </div>
+        `;
+      } else {
+        logsContainer.innerHTML = logs.map(l => `
+          <div class="overview-log-row">
+            <span class="log-row-time">${escapeHtml(l.timestamp.split(" ")[1] || l.timestamp)}</span>
+            <span class="badge ${l.level === 'SUCCESS' ? 'badge-success' : l.level === 'ERROR' ? 'badge-urgent' : 'badge-category'} log-row-badge">${escapeHtml(l.category)}</span>
+            <span class="log-row-message" title="${escapeHtml(l.message)}">${escapeHtml(l.message)}</span>
+          </div>
+        `).join("");
+      }
     }
   } catch (e) {
     console.error("Error loading overview:", e);
@@ -1568,6 +1594,11 @@ async function triggerSync() {
   if (icon) icon.classList.add("spin");
   if (text) text.textContent = "Syncing...";
 
+  const headerBtn = document.getElementById("btn-header-sync");
+  const headerIcon = headerBtn ? headerBtn.querySelector(".header-sync-icon") : null;
+  if (headerIcon) headerIcon.classList.add("spin");
+  if (headerBtn) headerBtn.style.opacity = "0.7";
+
   try {
     const res = await fetch("/api/emails/sync", { method: "POST" });
     const data = await res.json();
@@ -1576,12 +1607,19 @@ async function triggerSync() {
     } else {
       showToast(data.message || "Sync checked.", "info");
     }
+    const syncTimeEl = document.getElementById("header-sync-time");
+    if (syncTimeEl) {
+      const now = new Date();
+      syncTimeEl.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
     loadAllData(false);
   } catch (e) {
     showToast("Sync error: " + e.message, "error");
   } finally {
     if (icon) icon.classList.remove("spin");
-    if (text) text.textContent = "Sync Emails";
+    if (text) text.textContent = "Check for New Emails";
+    if (headerIcon) headerIcon.classList.remove("spin");
+    if (headerBtn) headerBtn.style.opacity = "1";
   }
 }
 

@@ -4,6 +4,36 @@ A dedicated, UI-based **Autonomous Email Automation Service** with AI email cate
 
 ---
 
+## 📑 Product Documentation & Presentation Deck
+
+This repository includes a complete **Product Requirements Document (PRD)** and an interactive **Presentation Pitch Deck (Slides)** designed for stakeholder presentations, team onboarding, and live client walkthroughs:
+
+* **📄 [Product Requirements Document (PRD.md)](PRD.md)**:
+  * Comprehensive product specification covering user personas, problem statement, functional specifications, "Explain Like I'm 7" UX philosophy, PromptShield adversarial defense, multi-tenant isolation, API definitions, and product roadmap.
+* **📊 [Product Presentation Deck (SLIDES.md)](SLIDES.md)**:
+  * 10 professionally structured slides with visual diagrams, key takeaways, and complete word-for-word **Speaker Notes** for presenters.
+  * Compatible with Marp, Slidev, Google Slides, Microsoft PowerPoint, and Gamma.app.
+
+### How to Use & Export the Slides:
+1. **Interactive CLI / Instant Export with Marp**:
+   ```bash
+   # Open live presentation preview:
+   npx @marp-team/marp-cli SLIDES.md --preview
+
+   # Export directly to PDF:
+   npx @marp-team/marp-cli SLIDES.md --pdf -o AutoMail_AI_Presentation.pdf
+
+   # Export directly to PowerPoint (.pptx):
+   npx @marp-team/marp-cli SLIDES.md --pptx -o AutoMail_AI_Presentation.pptx
+   ```
+2. **Google Slides / PowerPoint**:
+   * Open [SLIDES.md](SLIDES.md). Each slide is clearly demarcated by `<!-- SLIDE X -->`.
+   * Copy the slide title & bullets into your slide layout, and paste the `Speaker Notes` directly into your presentation notes pane.
+3. **AI Slide Generators (Gamma / Pitch)**:
+   * Upload [PRD.md](PRD.md) or [SLIDES.md](SLIDES.md) to [Gamma.app](https://gamma.app) to generate an AI presentation in under 30 seconds.
+
+---
+
 ## Key Features
 
 1. **Standalone Web Dashboard (`http://localhost:8000`)**

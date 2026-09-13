@@ -461,8 +461,9 @@ async function loadInbox() {
 
     if (filtered.length === 0) {
       container.innerHTML = `
-        <div style="padding: 30px; text-align: center; color: var(--text-dim); font-size: 0.85rem;">
-          No emails found in this filter.
+        <div class="empty-state">
+          <svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          <p>No emails match this filter.<br>Try a different category or clear the search.</p>
         </div>
       `;
       return;
@@ -650,10 +651,10 @@ async function loadApprovals() {
 
     if (drafts.length === 0) {
       container.innerHTML = `
-        <div class="card" style="text-align: center; padding: 48px 24px; color: var(--text-dim);">
-          <div style="font-size: 2.5rem; margin-bottom: 12px;">🎉</div>
-          <h3 style="color: #fff; font-size: 1.15rem; margin-bottom: 8px;">Approval Queue is Clear!</h3>
-          <p style="font-size: 0.88rem; max-width: 480px; margin: 0 auto;">All AI drafts have been reviewed or sent. When new emails arrive, automated replies will appear here for your one-click sign-off.</p>
+        <div class="empty-state">
+          <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <p style="color: var(--accent-emerald); font-weight: 600;">Approval Queue is Clear! 🎉</p>
+          <p>All AI drafts reviewed. New replies will appear here for one-click sign-off.</p>
         </div>
       `;
       return;

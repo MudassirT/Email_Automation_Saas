@@ -87,30 +87,41 @@ class SecretVault:
             return plain_text
 
     def decrypt_for_tenant(self, encrypted_text: str, org_id: str, salt: str, version: Optional[int] = None) -> str:
-        """Decrypt secret using organization's envelope key, auto-detecting key_version."""
+        """Decrypt secret using organization's envelope key.
+
+        Version detection precedence:
+        1. ``ENC::v{n}::`` prefix in the ciphertext (always wins — auto-detected below).
+        2. Explicit ``version`` kwarg (if provided and no prefix).
+        3. Fallback to v1 (only for legacy pre-versioned ``ENC::TOKEN`` ciphertexts).
+
+        The ``version or 1`` fallback is intentional for backward compatibility
+        with credentials encrypted before versioned prefixes were introduced.
+        It is overridden by the prefix auto-detection in all modern ciphertexts.
+        """
         if not encrypted_text:
             return ""
         if not encrypted_text.startswith("ENC::"):
             return encrypted_text
-        
+
         token = encrypted_text[5:]
-        eff_version = version or 1
-        
-        # Check if version is encoded in format ENC::v{version}::{token}
+        # Legacy fallback: used ONLY if no ENC::v{n}:: prefix is found below
+        eff_version = version if version is not None else 1
+
+        # Primary path: extract version from ENC::v{version}::{token} prefix
         if token.startswith("v") and "::" in token:
             v_str, actual_token = token.split("::", 1)
             try:
                 eff_version = int(v_str[1:])
                 token = actual_token
             except ValueError:
-                pass
+                pass  # malformed prefix — stay with eff_version
 
         try:
             tenant_key = self.derive_tenant_key(org_id, salt, eff_version)
             tenant_cipher = Fernet(tenant_key)
             return tenant_cipher.decrypt(token.encode("utf-8")).decode("utf-8")
         except Exception:
-            # Fallback to master cipher in case it was encrypted with legacy global key
+            # Final fallback: legacy ciphertexts encrypted with the global master key
             return self.decrypt(encrypted_text)
 
     def encrypt(self, plain_text: str) -> str:

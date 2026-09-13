@@ -12,10 +12,11 @@ Features:
 import json
 import re
 import requests
-from typing import Dict, Any, Tuple, List
+from typing import Dict, Any, Tuple, List, Optional
 from .config import load_config
 from .storage import storage
 from .security import PromptShield, DataLeakPreventer
+from .gemini_pool import gemini_token_manager
 
 
 def extract_sender_info(from_str: str) -> Tuple[str, str]:
@@ -88,9 +89,14 @@ class AIEngine:
         ai_cfg = cfg.get("ai", {})
         api_key = ai_cfg.get("gemini_api_key", "").strip()
 
-        if api_key and ai_cfg.get("provider") == "gemini":
+        if (api_key or gemini_token_manager.total_slots > 0) and ai_cfg.get("provider", "gemini") == "gemini":
             try:
-                result = self._analyze_with_gemini(email_data, api_key, ai_cfg.get("model_name", "gemini-1.5-flash"))
+                result = self._analyze_with_gemini(
+                    email_data,
+                    user_id=user_id,
+                    byok_key=api_key if api_key else None,
+                    model=ai_cfg.get("model_name", "gemini-3.6-flash")
+                )
                 if result:
                     return result
             except Exception as e:
@@ -113,10 +119,16 @@ class AIEngine:
         system_instructions = ai_cfg.get("system_instructions", "")
 
         draft = ""
-        if api_key and ai_cfg.get("provider") == "gemini":
+        if (api_key or gemini_token_manager.total_slots > 0) and ai_cfg.get("provider", "gemini") == "gemini":
             try:
                 draft = self._generate_reply_with_gemini(
-                    email_data, tone, custom_prompt, system_instructions, api_key, ai_cfg.get("model_name", "gemini-1.5-flash")
+                    email_data,
+                    tone=tone,
+                    custom_prompt=custom_prompt,
+                    system_instructions=system_instructions,
+                    user_id=user_id,
+                    byok_key=api_key if api_key else None,
+                    model=ai_cfg.get("model_name", "gemini-3.6-flash")
                 )
             except Exception as e:
                 storage.for_user(user_id).log("AI", f"Gemini draft generation failed: {e}. Falling back to smart built-in engine.", "WARNING")
@@ -133,7 +145,13 @@ class AIEngine:
         return draft
 
     # --- GEMINI INTEGRATION WITH STRICT BOUNDARIES & BRIEFING ---
-    def _analyze_with_gemini(self, email_data: Dict[str, Any], api_key: str, model: str) -> Dict[str, Any]:
+    def _analyze_with_gemini(
+        self,
+        email_data: Dict[str, Any],
+        user_id: str,
+        byok_key: Optional[str] = None,
+        model: str = "gemini-3.6-flash"
+    ) -> Dict[str, Any]:
         clean_subject = PromptShield.sanitize_for_llm(email_data.get("subject", ""), max_chars=300)
         clean_body = PromptShield.sanitize_for_llm(email_data.get("body", ""), max_chars=3000)
 
@@ -173,18 +191,40 @@ Respond ONLY with valid JSON matching this exact structure:
   ]
 }}"""
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
-        payload = {
-            "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {"temperature": 0.2, "responseMimeType": "application/json"}
-        }
-        res = requests.post(url, json=payload, timeout=12)
-        res.raise_for_status()
-        data = res.json()
-        raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
-        return json.loads(raw_text)
+        exec_res = gemini_token_manager.execute_with_failover(
+            tenant_id=user_id,
+            contents=[{"parts": [{"text": prompt}]}],
+            generation_config={"temperature": 0.2, "responseMimeType": "application/json"},
+            model_name=model,
+            byok_key=byok_key
+        )
+        raw_text = exec_res["text"]
+        # Handle cases where model wraps in markdown json blocks
+        if "```json" in raw_text:
+            raw_text = raw_text.split("```json", 1)[1].split("```", 1)[0].strip()
+        elif "```" in raw_text:
+            raw_text = raw_text.split("```", 1)[1].split("```", 1)[0].strip()
 
-    def _generate_reply_with_gemini(self, email_data: Dict[str, Any], tone: str, custom_prompt: str, system_instructions: str, api_key: str, model: str) -> str:
+        parsed = json.loads(raw_text)
+        parsed["_token_metrics"] = {
+            "slot_id": exec_res.get("slot_id", "byok"),
+            "prompt_tokens": exec_res.get("prompt_tokens", 0),
+            "candidates_tokens": exec_res.get("candidates_tokens", 0),
+            "total_tokens": exec_res.get("total_tokens", 0),
+            "latency_ms": exec_res.get("latency_ms", 0.0)
+        }
+        return parsed
+
+    def _generate_reply_with_gemini(
+        self,
+        email_data: Dict[str, Any],
+        tone: str,
+        custom_prompt: str,
+        system_instructions: str,
+        user_id: str,
+        byok_key: Optional[str] = None,
+        model: str = "gemini-3.6-flash"
+    ) -> str:
         clean_subject = PromptShield.sanitize_for_llm(email_data.get("subject", ""), max_chars=300)
         clean_body = PromptShield.sanitize_for_llm(email_data.get("body", ""), max_chars=3000)
 
@@ -211,15 +251,14 @@ Body:
 
 Draft a clear, comprehensive email response that addresses each question or task directly. Output ONLY the email reply text with no meta markers."""
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
-        payload = {
-            "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {"temperature": 0.4}
-        }
-        res = requests.post(url, json=payload, timeout=15)
-        res.raise_for_status()
-        data = res.json()
-        return data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        exec_res = gemini_token_manager.execute_with_failover(
+            tenant_id=user_id,
+            contents=[{"parts": [{"text": prompt}]}],
+            generation_config={"temperature": 0.4},
+            model_name=model,
+            byok_key=byok_key
+        )
+        return exec_res["text"].strip()
 
     # --- BUILT-IN SMART ENGINE ---
     def _analyze_built_in(self, email_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -399,18 +438,23 @@ Draft a clear, comprehensive email response that addresses each question or task
         api_key = ai_cfg.get("gemini_api_key", "").strip()
 
         if provider == "gemini":
-            if not api_key:
+            if not api_key and gemini_token_manager.total_slots == 0:
                 return False, "No Gemini API key configured. Enter your API key to automate tasks with Gemini."
             try:
-                model = ai_cfg.get("model_name", "gemini-1.5-flash")
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
-                payload = {
-                    "contents": [{"parts": [{"text": "Ping"}]}],
-                    "generationConfig": {"temperature": 0.1, "maxOutputTokens": 5}
-                }
-                res = requests.post(url, json=payload, timeout=8)
-                res.raise_for_status()
-                return True, f"Gemini ({model}) authenticated & online! Autonomous task execution enabled."
+                model = ai_cfg.get("model_name", "gemini-3.6-flash")
+                res = gemini_token_manager.execute_with_failover(
+                    tenant_id=user_id,
+                    contents=[{"parts": [{"text": "Ping"}]}],
+                    generation_config={"temperature": 0.1, "maxOutputTokens": 5},
+                    model_name=model,
+                    byok_key=api_key if api_key else None,
+                    timeout=10.0
+                )
+                slot_id = res.get("slot_id", "byok")
+                masked = res.get("masked_key", "custom_key")
+                tokens = res.get("total_tokens", 0)
+                lat = res.get("latency_ms", 0.0)
+                return True, f"Gemini ({res.get('model', model)}) authenticated & online! Token Slot: {slot_id} ({masked}) | Tokens: {tokens} | Latency: {lat}ms"
             except Exception as e:
                 return False, f"Gemini API key verification failed: {e}"
         else:

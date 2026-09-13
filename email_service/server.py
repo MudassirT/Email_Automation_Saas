@@ -30,6 +30,7 @@ from .ai_engine import ai_engine
 from .security import vault, dispatch_limiter, api_rate_limiter, tenant_security
 from .auth import user_manager, google_oauth, create_jwt_token, decode_jwt_token
 from .rag_engine import rag_chatbot
+from .gemini_pool import gemini_token_manager
 
 BASE_DIR = Path(__file__).parent
 STATIC_DIR = BASE_DIR / "static"
@@ -446,6 +447,19 @@ def get_admin_user_inspect(user_id: str, admin_user: Dict[str, Any] = Depends(re
     """Retrieve telemetry deep-dive for a specific tenant (Admin only)."""
     clean_id = tenant_security.sanitize_tenant_id(user_id)
     return storage.get_tenant_inspect_data(clean_id)
+
+
+@app.get("/api/admin/gemini/pool")
+def get_admin_gemini_pool(admin_user: Dict[str, Any] = Depends(require_admin)):
+    """Retrieve real-time token tracking and health telemetry across all Gemini keys (Admin only)."""
+    return gemini_token_manager.get_telemetry()
+
+
+@app.post("/api/admin/gemini/pool/reload")
+def reload_admin_gemini_pool(admin_user: Dict[str, Any] = Depends(require_admin)):
+    """Re-scan .env and environment for newly configured Gemini API keys (Admin only)."""
+    gemini_token_manager.reload_keys_from_env()
+    return {"success": True, "telemetry": gemini_token_manager.get_telemetry()}
 
 
 # --- API ENDPOINTS ---

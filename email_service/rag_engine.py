@@ -29,6 +29,7 @@ from typing import Dict, Any, List, Optional, Tuple, Set
 from .config import load_config
 from .storage import storage
 from .security import PromptShield, DataLeakPreventer
+from .gemini_pool import gemini_token_manager
 
 
 @dataclass
@@ -489,17 +490,19 @@ class RAGChatbot:
 
         answer = ""
         suggested_actions = []
+        used_engine = "AutoMail RAG Engine"
 
-        if gemini_key and ai_cfg.get("provider") == "gemini":
+        if (gemini_key or gemini_token_manager.total_slots > 0) and ai_cfg.get("provider", "gemini") == "gemini":
             try:
-                answer, suggested_actions = self._generate_with_gemini(
+                answer, suggested_actions, slot_info = self._generate_with_gemini(
                     clean_query,
                     retrieved,
                     conversation_history or [],
-                    gemini_key,
-                    ai_cfg.get("model_name", "gemini-1.5-flash"),
-                    user_id
+                    byok_key=gemini_key if gemini_key else None,
+                    model=ai_cfg.get("model_name", "gemini-3.6-flash"),
+                    user_id=user_id
                 )
+                used_engine = f"Gemini ({slot_info})"
             except Exception as e:
                 storage.for_user(user_id).log("AI", f"RAG Gemini generation failed: {e}. Switching to offline RAG engine.", "WARNING")
 
@@ -520,7 +523,7 @@ class RAGChatbot:
             "sources": sources,
             "suggested_actions": suggested_actions,
             "user_id": user_id,
-            "engine": "Gemini 1.5 Flash" if (gemini_key and ai_cfg.get("provider") == "gemini") else "AutoMail RAG Engine"
+            "engine": used_engine
         }
 
     def get_dynamic_suggestions(self, user_id: str = "default") -> List[str]:
@@ -543,10 +546,10 @@ class RAGChatbot:
         # Sender-specific suggestion
         if emails:
             latest_sender = emails[0].get("from", "").split("<")[0].strip() or "my latest contact"
-            suggestions.append(f"What did {latest_sender} email me about?")
+            suggestions.append(f"What is the status of communications with {latest_sender}?")
 
-        # General domain suggestions
-        if len(suggestions) < 4:
+        # Fallback defaults if mailbox is empty
+        if not suggestions:
             suggestions.append("What automation rules are currently protecting my mailbox?")
             suggestions.append("How do I configure my Gmail App Password?")
             suggestions.append("Explain AutoMail AI's prompt injection defense system.")
@@ -559,12 +562,10 @@ class RAGChatbot:
         query: str,
         retrieved: List[Tuple[RAGDocumentChunk, float]],
         conversation_history: List[Dict[str, str]],
-        api_key: str,
+        byok_key: Optional[str],
         model: str,
         user_id: str
-    ) -> Tuple[str, List[str]]:
-        import requests
-
+    ) -> Tuple[str, List[str], str]:
         # Build securely delimited context
         context_blocks = []
         for i, (chunk, score) in enumerate(retrieved, 1):
@@ -602,15 +603,16 @@ RELEVANT USER WORKSPACE DOCUMENTS:
 
 Respond in clean, well-formatted GitHub Markdown. Output your answer directly."""
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
-        payload = {
-            "contents": [{"parts": [{"text": system_prompt}]}],
-            "generationConfig": {"temperature": 0.3}
-        }
-        res = requests.post(url, json=payload, timeout=15)
-        res.raise_for_status()
-        data = res.json()
-        answer = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        exec_res = gemini_token_manager.execute_with_failover(
+            tenant_id=user_id,
+            contents=[{"parts": [{"text": system_prompt}]}],
+            generation_config={"temperature": 0.3},
+            model_name=model,
+            byok_key=byok_key,
+            timeout=18.0
+        )
+        answer = exec_res["text"].strip()
+        slot_label = f"{exec_res.get('slot_id', 'byok')} - {exec_res.get('masked_key', '')} ({exec_res.get('total_tokens', 0)} tokens)"
 
         # Extract suggested actions from text or fallback
         actions = []
@@ -623,7 +625,7 @@ Respond in clean, well-formatted GitHub Markdown. Output your answer directly.""
         if not actions:
             actions = ["Review relevant email", "Check pending approvals", "Update automation rules"]
 
-        return answer, actions[:3]
+        return answer, actions[:3], slot_label
 
     # --- BUILT-IN SMART RAG REASONER (OFFLINE FALLBACK) ---
     def _generate_built_in(

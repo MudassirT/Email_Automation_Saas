@@ -34,7 +34,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "ai": {
         "provider": "gemini",  # 'gemini' or 'built_in'
         "gemini_api_key": "",
-        "model_name": "gemini-1.5-flash",
+        "model_name": "gemini-3.6-flash",
         "default_tone": "Professional",  # 'Professional', 'Friendly', 'Direct', 'Executive'
         "system_instructions": (
             "You are an AI Email Assistant for a professional executive. "

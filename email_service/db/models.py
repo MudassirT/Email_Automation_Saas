@@ -2,10 +2,16 @@
 SQLAlchemy 2.0 Async Models for AutoMail AI Enterprise SaaS.
 Full multi-tenant data architecture with foreign key cascades,
 b-tree composite indexes, envelope encryption metadata, and audit integrity safeguards.
+
+Field-level encryption (AES-256 / Fernet) is applied transparently via
+``EncryptedTextField`` TypeDecorator.  The encryption context (org_id, salt,
+key_version) must be set per-request using ``set_encryption_context()`` before
+any ORM flush/load that touches encrypted columns.
 """
 
+from contextvars import ContextVar
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
 from sqlalchemy import (
     String, Text, Integer, Boolean, DateTime, ForeignKey,
     UniqueConstraint, Index, func, JSON
@@ -13,6 +19,92 @@ from sqlalchemy import (
 from sqlalchemy.orm import (
     DeclarativeBase, Mapped, mapped_column, relationship
 )
+from sqlalchemy.types import TypeDecorator
+
+
+# ---------------------------------------------------------------------------
+# FIELD-LEVEL ENCRYPTION CONTEXT
+# ---------------------------------------------------------------------------
+# ContextVar is coroutine-safe: each asyncio Task sees its own copy.
+# Set this at the start of every request/worker that reads or writes
+# encrypted EmailMessage fields.
+_enc_ctx: ContextVar[Optional[Tuple[str, str, int]]] = ContextVar(
+    "_enc_ctx", default=None
+)
+
+
+def set_encryption_context(org_id: str, salt: str, key_version: int) -> None:
+    """Bind (org_id, salt, key_version) to the current async context.
+
+    Call this inside any route handler or worker coroutine that will
+    read or write ``EmailMessage.subject``, ``.body``, or ``.sender``.
+    """
+    _enc_ctx.set((org_id, salt, key_version))
+
+
+def clear_encryption_context() -> None:
+    """Remove encryption context from the current coroutine (call in finally blocks)."""
+    _enc_ctx.set(None)
+
+
+def get_encryption_context() -> Optional[Tuple[str, str, int]]:
+    """Return the active (org_id, salt, key_version) tuple, or None."""
+    return _enc_ctx.get()
+
+
+class EncryptedTextField(TypeDecorator):
+    """SQLAlchemy column type that transparently encrypts/decrypts text values.
+
+    * ``process_bind_param``  — called before INSERT/UPDATE: encrypts plaintext
+      using the active ``EncryptionContext``.  If no context is set the value
+      is stored as-is (plaintext) so that bulk migrations and test fixtures
+      still work without requiring a context.
+    * ``process_result_value`` — called after SELECT: if the stored value starts
+      with ``ENC::`` it is decrypted; otherwise returned verbatim.
+
+    The vault singleton is imported lazily to avoid circular imports at
+    module-load time.
+    """
+
+    impl = Text
+    cache_ok = True  # safe: key material travels via ContextVar, not instance state
+
+    def process_bind_param(self, value: Optional[str], dialect) -> Optional[str]:
+        """Encrypt on write (INSERT/UPDATE)."""
+        if value is None:
+            return value
+        ctx = get_encryption_context()
+        if ctx is None:
+            # No context: store plaintext (migration / seeding path)
+            return value
+        if value.startswith("ENC::"):
+            # Already encrypted (e.g. re-insert of fetched object); pass through
+            return value
+        org_id, salt, version = ctx
+        try:
+            from email_service.security import vault  # lazy import
+            return vault.encrypt_for_tenant(value, org_id, salt, version)
+        except Exception:
+            # Fail open to plaintext rather than losing data; log in production
+            return value
+
+    def process_result_value(self, value: Optional[str], dialect) -> Optional[str]:
+        """Decrypt on read (SELECT)."""
+        if value is None:
+            return value
+        if not value.startswith("ENC::"):
+            # Plaintext (pre-encryption rows, test seeds)
+            return value
+        ctx = get_encryption_context()
+        if ctx is None:
+            # No context: return ciphertext unchanged — caller must handle
+            return value
+        org_id, salt, version = ctx
+        try:
+            from email_service.security import vault  # lazy import
+            return vault.decrypt_for_tenant(value, org_id, salt, version)
+        except Exception:
+            return value
 
 
 class Base(DeclarativeBase):
@@ -169,13 +261,19 @@ class EmailMessage(Base):
 
     uid: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     message_id_header: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
-    sender: Mapped[str] = mapped_column(Text, nullable=False)
+    # ── FIELD-LEVEL ENCRYPTION ──────────────────────────────────────────────
+    # sender, subject, and body are stored as AES-256/Fernet ciphertext.
+    # The EncryptedTextField TypeDecorator transparently encrypts on write
+    # and decrypts on read when an EncryptionContext is active.
+    # BM25 / RAG indexing operates on decrypted plaintext at query-time;
+    # see rag_engine.py for the decrypt-then-index pipeline.
+    sender: Mapped[str] = mapped_column(EncryptedTextField, nullable=False)
     sender_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     sender_organization: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     recipient: Mapped[str] = mapped_column(Text, nullable=False)
-    subject: Mapped[str] = mapped_column(Text, nullable=False)
+    subject: Mapped[str] = mapped_column(EncryptedTextField, nullable=False)
     snippet: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    body: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    body: Mapped[Optional[str]] = mapped_column(EncryptedTextField, nullable=True)
     date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
 
     # AI Classification & Briefings
